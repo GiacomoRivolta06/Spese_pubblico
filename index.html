@@ -69,13 +69,20 @@ header.top { flex-wrap: wrap; }
 .period-label { flex: 1; min-width: 0; border: 0; background: none; font-weight: 600; font-size: 1.02rem; text-align: center; padding: 6px; border-radius: 8px; }
 .period-label:first-letter { text-transform: uppercase; }
 .period-label:hover { background: var(--paper); }
-.cols { display: grid; grid-template-columns: repeat(var(--n, 12), 1fr); gap: 4px; align-items: end; margin-top: 16px; padding-top: 14px; border-top: 1px dashed var(--line); }
+/* Grafico a colonne: ogni colonna è divisa tra spese normali (azzurro, in basso) e offerte (arancio, sopra) */
+.chart { margin-top: 16px; padding-top: 12px; border-top: 1px dashed var(--line); display: flex; flex-direction: column; gap: 10px; }
+.legend { display: flex; gap: 14px; font-size: .74rem; color: var(--muted); }
+.legend span { display: inline-flex; align-items: center; gap: 6px; }
+.sw { width: 10px; height: 10px; border-radius: 3px; background: var(--accent); }
+.sw.g { background: var(--gift); }
+.cols { display: grid; grid-template-columns: repeat(var(--n, 12), 1fr); gap: 4px; align-items: end; }
 .col { display: flex; flex-direction: column; align-items: center; gap: 4px; min-width: 0; }
-.col-bar { width: 100%; max-width: 22px; height: 64px; display: flex; align-items: flex-end; background: var(--accent-soft); border-radius: 4px; overflow: hidden; }
-.col-bar i { display: block; width: 100%; background: var(--accent); border-radius: 4px 4px 0 0; }
-.col.now .col-bar i { background: var(--gift); }
-.col span { font-size: .68rem; color: var(--muted); text-transform: uppercase; letter-spacing: .03em; }
-.col.now span { color: var(--ink); font-weight: 600; }
+.col-bar { width: 100%; max-width: var(--bw, 22px); height: 64px; display: flex; flex-direction: column; justify-content: flex-end; gap: 2px; background: var(--accent-soft); border-radius: 4px; overflow: hidden; }
+.col-bar i { display: block; width: 100%; flex: none; background: var(--accent); }
+.col-bar i.g { background: var(--gift); }
+.col-bar i:first-child { border-radius: 4px 4px 0 0; }
+.col span { font-size: .68rem; color: var(--muted); text-transform: uppercase; letter-spacing: .03em; white-space: nowrap; padding-bottom: 1px; border-bottom: 2px solid transparent; }
+.col.now span { color: var(--ink); font-weight: 700; border-bottom-color: var(--ink); }
 .icon-btn { border: 1px solid var(--line); background: var(--paper); width: 34px; height: 34px; border-radius: 8px; display: grid; place-items: center; font-size: 1.1rem; line-height: 1; }
 .icon-btn:hover { border-color: var(--accent); }
 
@@ -125,9 +132,14 @@ header.top { flex-wrap: wrap; }
 .version { font-size: .82rem; color: var(--muted); }
 .version a { color: var(--accent); font-weight: 600; }
 .bar-row .n { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.bar-track { height: 8px; background: var(--accent-soft); border-radius: 4px; overflow: hidden; }
-.bar-fill { height: 100%; background: var(--accent); border-radius: 4px; }
-.bar-row .v { font-family: var(--f-num); font-variant-numeric: tabular-nums; font-size: .82rem; }
+.bar-track { height: 8px; background: var(--accent-soft); border-radius: 4px; overflow: hidden; display: flex; gap: 2px; }
+.bar-fill { height: 100%; flex: none; background: var(--accent); }
+.bar-fill.g { background: var(--gift); }
+.bar-fill:last-child { border-radius: 0 4px 4px 0; }
+.bar-row[aria-pressed="false"] .bar-fill.g { background: var(--line); }
+.bar-row .v { font-family: var(--f-num); font-variant-numeric: tabular-nums; font-size: .82rem; text-align: right; line-height: 1.25; }
+.bar-row .v small { display: block; font-size: .72rem; color: var(--gift); }
+.bar-row[aria-pressed="false"] .v small { color: var(--muted); }
 
 /* Modulo */
 form.entry { background: var(--paper); border: 1px solid var(--line); border-radius: 10px; padding: 16px; display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
@@ -250,7 +262,10 @@ input:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px 
       <span><b id="count">0</b> voci</span>
       <span class="g">offerto <b id="giftTotal" class="num">€ 0,00</b></span>
     </div>
-    <div class="cols" id="cols" hidden></div>
+    <div class="chart" id="chart" hidden>
+      <div class="legend" id="legend" hidden><span><i class="sw"></i>Spese</span><span><i class="sw g"></i>Offerto</span></div>
+      <div class="cols" id="cols"></div>
+    </div>
     <div class="bars" id="bars" hidden></div>
   </section>
 
@@ -497,43 +512,71 @@ input:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px 
     $("count").textContent = inMonth.length;
     $("giftTotal").textContent = euro(gift);
 
-    // colonne: giorni della settimana o mesi dell'anno
-    const cols = $("cols");
+    // colonne: giorni della settimana, settimane del mese o mesi dell'anno.
+    // Ogni colonna somma le spese normali (azzurro) e quelle offerte (arancio, sopra).
+    const cols = $("cols"), chart = $("chart");
     cols.replaceChildren();
-    cols.hidden = view === "month" || searching || !inMonth.length;
-    if (!cols.hidden) {
+    chart.hidden = searching || !inMonth.length;
+    $("legend").hidden = chart.hidden || gift === 0;
+    if (!chart.hidden) {
       const buckets = [];
       const todayIso = today();
+      const sumIn = (a, b) => {
+        let v = 0, g = 0;
+        inMonth.forEach(r => { if (r.data >= a && r.data <= b) { if (r.offerto) g += r.prezzoCent || 0; else v += r.prezzoCent || 0; } });
+        return { v, g };
+      };
       if (view === "week") {
         const s = weekStart(anchor);
         for (let i = 0; i < 7; i++) { const d = new Date(s); d.setDate(d.getDate() + i); const k = iso(d);
-          buckets.push({ lab: wdFmt.format(d), title: dayFmt.format(d), now: k === todayIso, v: inMonth.filter(r => r.data === k && !r.offerto).reduce((t, r) => t + r.prezzoCent, 0) }); }
+          buckets.push({ lab: wdFmt.format(d), title: dayFmt.format(d), now: k === todayIso, ...sumIn(k, k) }); }
+      } else if (view === "month") {
+        // Settimane da lunedì a domenica, tagliate ai giorni del mese
+        const y = anchor.getFullYear(), m = anchor.getMonth(), last = new Date(y, m + 1, 0).getDate();
+        let d = 1;
+        while (d <= last) {
+          const s = new Date(y, m, d);
+          const e = Math.min(last, d + (6 - ((s.getDay() + 6) % 7)));
+          const a = iso(s), b = iso(new Date(y, m, e));
+          buckets.push({ lab: d === e ? String(d) : `${d}–${e}`, title: d === e ? shortFmt.format(s) : `${shortFmt.format(s)} – ${shortFmt.format(new Date(y, m, e))}`,
+            now: todayIso >= a && todayIso <= b, ...sumIn(a, b) });
+          d = e + 1;
+        }
       } else {
         const y = anchor.getFullYear();
-        for (let m = 0; m < 12; m++) { const k = `${y}-${pad(m + 1)}`; const d = new Date(y, m, 1);
-          buckets.push({ lab: monthShortFmt.format(d), title: monthNameFmt.format(d), now: todayIso.startsWith(k), v: inMonth.filter(r => r.data.startsWith(k) && !r.offerto).reduce((t, r) => t + r.prezzoCent, 0) }); }
+        for (let m = 0; m < 12; m++) { const d = new Date(y, m, 1); const a = iso(d), b = iso(new Date(y, m + 1, 0));
+          buckets.push({ lab: monthShortFmt.format(d), title: monthNameFmt.format(d), now: todayIso >= a && todayIso <= b, ...sumIn(a, b) }); }
       }
-      const mx = Math.max(1, ...buckets.map(b => b.v));
+      const H = 64;
+      const mx = Math.max(1, ...buckets.map(b => b.v + b.g));
       cols.style.setProperty("--n", buckets.length);
+      cols.style.setProperty("--bw", view === "month" ? "40px" : "22px");
       buckets.forEach(b => {
         const c = document.createElement("div"); c.className = "col" + (b.now ? " now" : "");
-        c.title = `${b.title}: ${euro(b.v)}`;
+        c.title = `${b.title}: ${euro(b.v)}` + (b.g ? ` · offerto ${euro(b.g)}` : "");
         const bar = document.createElement("div"); bar.className = "col-bar";
-        const fill = document.createElement("i"); fill.style.height = (b.v / mx * 100) + "%";
-        bar.append(fill);
+        const tot = b.v + b.g;
+        if (tot > 0) {
+          const both = b.v > 0 && b.g > 0;
+          const h = Math.max(both ? 6 : 2, tot / mx * H) - (both ? 2 : 0);
+          const hg = b.g ? Math.max(2, h * b.g / tot) : 0, hv = b.v ? Math.max(2, h - hg) : 0;
+          if (b.g) { const ig = document.createElement("i"); ig.className = "g"; ig.style.height = hg + "px"; bar.append(ig); }
+          if (b.v) { const iv = document.createElement("i"); iv.style.height = hv + "px"; bar.append(iv); }
+        }
         const l = document.createElement("span"); l.textContent = b.lab;
         c.append(bar, l); cols.append(c);
       });
     }
 
     // barre per tipologia
+    // ogni barra: spese normali (azzurro) seguite dalle offerte (arancio), se ce ne sono
     const byTipo = {};
-    all.forEach(r => { const t = tipoKey(r); byTipo[t] = (byTipo[t] || 0) + (r.offerto ? 0 : (r.prezzoCent || 0)); });
-    const entries = Object.entries(byTipo).sort((a, b) => b[1] - a[1]);
+    all.forEach(r => { const t = tipoKey(r); const o = byTipo[t] || (byTipo[t] = { v: 0, g: 0 }); if (r.offerto) o.g += r.prezzoCent || 0; else o.v += r.prezzoCent || 0; });
+    const entries = Object.entries(byTipo).sort((a, b) => (b[1].v + b[1].g) - (a[1].v + a[1].g) || b[1].v - a[1].v);
     const bars = $("bars");
     bars.hidden = entries.length === 0;
     bars.replaceChildren();
-    const max = entries.length ? entries[0][1] : 1;
+    const max = Math.max(1, ...entries.map(([, o]) => o.v + o.g));
     const nOff = entries.filter(([t]) => hidden.has(t)).length;
     const head = document.createElement("div"); head.className = "bars-head";
     const hl0 = document.createElement("span");
@@ -541,7 +584,7 @@ input:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px 
     head.append(hl0);
     if (nOff) { const sa = document.createElement("button"); sa.type = "button"; sa.className = "link"; sa.textContent = "Mostra tutte"; sa.addEventListener("click", showAll); head.append(sa); }
     bars.append(head);
-    entries.forEach(([t, v]) => {
+    entries.forEach(([t, { v, g }]) => {
       const on = !hidden.has(t);
       const row = document.createElement("button"); row.type = "button"; row.className = "bar-row";
       row.dataset.tipo = t; row.setAttribute("aria-pressed", String(on));
@@ -551,9 +594,13 @@ input:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px 
       row.append(dot);
       const n = document.createElement("span"); n.className = "n"; n.textContent = tipoName(t);
       const tr = document.createElement("div"); tr.className = "bar-track";
-      const f = document.createElement("div"); f.className = "bar-fill"; f.style.width = (max ? (v / max) * 100 : 0) + "%";
-      tr.append(f);
+      const both = v > 0 && g > 0;
+      // le due parti condividono la stessa scala; 2px di stacco tra azzurro e arancio
+      const w = (x) => `calc(${(x / max) * 100}%${both ? " - 1px" : ""})`;
+      if (v) { const f = document.createElement("div"); f.className = "bar-fill"; f.style.width = w(v); tr.append(f); }
+      if (g) { const f = document.createElement("div"); f.className = "bar-fill g"; f.style.width = w(g); tr.append(f); }
       const val = document.createElement("span"); val.className = "v"; val.textContent = euro(v);
+      if (g) { const s = document.createElement("small"); s.textContent = "+ " + euro(g) + " offerto"; val.append(s); }
       row.append(n, tr, val); bars.append(row);
     });
 
