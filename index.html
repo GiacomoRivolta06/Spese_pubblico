@@ -58,9 +58,19 @@ body {
 button { font: inherit; color: inherit; cursor: pointer; }
 :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 
-header.top { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+/* Intestazione: conti a sinistra, impostazioni in alto a destra; su telefono i periodi vanno sotto, a tutta larghezza */
+header.top { display: grid; grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: "titolo imp" "seg seg"; align-items: center; gap: 10px 12px; }
+header.top h1 { grid-area: titolo; }
+header.top .seg { grid-area: seg; display: flex; }
+header.top .seg button { flex: 1; }
+header.top .imp-btn { grid-area: imp; }
+@media (min-width: 560px) {
+  header.top { grid-template-columns: minmax(0, 1fr) auto auto; grid-template-areas: "titolo seg imp"; }
+  header.top .seg { display: inline-flex; }
+}
+.imp-btn { width: 40px; height: 40px; color: var(--muted); }
+.imp-btn:hover { color: var(--accent); }
 h1 { font-family: var(--f-display); font-weight: 700; font-size: 1.6rem; letter-spacing: -0.01em; margin: 0; }
-header.top { flex-wrap: wrap; }
 .seg { display: inline-flex; background: var(--paper); border: 1px solid var(--line); border-radius: 9px; padding: 3px; gap: 2px; }
 .seg button { border: 0; background: none; padding: 6px 11px; border-radius: 6px; font-size: .86rem; font-weight: 600; color: var(--muted); }
 .seg button:hover { color: var(--ink); }
@@ -280,6 +290,46 @@ dialog.dlg::backdrop { background: rgba(10, 20, 25, .45); }
 .scelta-conti button { border: 1px solid var(--line); background: var(--bg); border-radius: 8px; padding: 12px 14px; text-align: left; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .scelta-conti button:hover, .scelta-conti button:focus-visible { border-color: var(--accent); background: var(--accent-soft); }
 
+/* Casella "salva la foto" in cima alla scelta del conto */
+.foto-box { display: flex; align-items: center; gap: 12px; padding: 11px 12px; border: 1px solid var(--line); border-radius: 10px; background: var(--bg); cursor: pointer; user-select: none; }
+.foto-box input { width: 20px; height: 20px; margin: 0; accent-color: var(--accent); flex: none; }
+.foto-box span { font-weight: 600; }
+.foto-box:has(input:checked) { border-color: var(--accent); background: var(--accent-soft); }
+
+/* Impostazioni */
+dialog.dlg-imp { width: min(460px, calc(100% - 24px)); }
+.dlg-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin: -6px -6px -4px 0; }
+.imp-sez { display: flex; flex-direction: column; gap: 8px; padding-top: 14px; border-top: 1px dashed var(--line); }
+.imp-sez:first-of-type { border-top: 0; padding-top: 0; }
+.imp-sez h3 { margin: 0; font-size: .72rem; text-transform: uppercase; letter-spacing: .09em; color: var(--muted); font-weight: 600; }
+.imp-sez p { margin: 0; color: var(--muted); font-size: .86rem; }
+.interruttore { display: flex; align-items: center; justify-content: space-between; gap: 14px; cursor: pointer; user-select: none; }
+.interruttore .testo { display: flex; flex-direction: column; min-width: 0; }
+.interruttore .testo b { font-weight: 600; }
+.interruttore .testo small { color: var(--muted); font-size: .8rem; }
+.interruttore input { appearance: none; -webkit-appearance: none; flex: none; position: relative; width: 46px; height: 28px; margin: 0; border-radius: 99px; background: var(--line); cursor: pointer; transition: background .15s ease; }
+.interruttore input::after { content: ""; position: absolute; top: 3px; left: 3px; width: 22px; height: 22px; border-radius: 50%; background: var(--paper); box-shadow: 0 1px 3px rgba(0,0,0,.25); transition: transform .15s ease; }
+.interruttore input:checked { background: var(--accent); }
+.interruttore input:checked::after { transform: translateX(18px); }
+.interruttore input:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.ver-riga { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 12px; }
+.ver-riga .version { font-family: var(--f-num); font-size: .86rem; color: var(--ink); }
+.agg-esito { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; font-size: .86rem; }
+.agg-esito:empty { display: none; }
+.agg-esito.err { color: var(--danger); }
+.agg-esito .primary { padding: 7px 14px; }
+
+/* Foto dello scontrino */
+.chip.foto { display: inline-flex; align-items: center; gap: 4px; background: var(--bg); color: var(--ink); border: 1px solid var(--line); }
+.chip.foto svg { color: var(--accent); }
+dialog.dlg-foto { width: min(560px, calc(100% - 16px)); max-height: calc(100% - 16px); }
+.foto-vista { display: grid; place-items: center; min-height: 160px; background: var(--bg); border-radius: 8px; overflow: hidden; color: var(--muted); font-size: .86rem; }
+.foto-vista img { display: block; width: 100%; height: auto; }
+.foto-azioni { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.form-foto { grid-column: 1 / -1; display: flex; align-items: center; gap: 8px; font-size: .84rem; color: var(--muted); }
+.form-foto svg { color: var(--accent); flex: none; }
+@media (prefers-reduced-motion: reduce) { .interruttore input, .interruttore input::after { transition: none; } }
+
 .empty { background: var(--paper); border: 1px dashed var(--line); border-radius: 10px; padding: 24px 18px; text-align: center; color: var(--muted); }
 .empty strong { display: block; color: var(--ink); font-family: var(--f-display); font-size: 1.05rem; margin-bottom: 4px; }
 .note { font-size: .82rem; color: var(--muted); text-align: center; }
@@ -303,6 +353,7 @@ dialog.dlg::backdrop { background: rgba(10, 20, 25, .45); }
       <button type="button" id="v-month" data-view="month">Mese</button>
       <button type="button" id="v-year" data-view="year">Anno</button>
     </div>
+    <button type="button" class="icon-btn imp-btn" id="impBtn" aria-haspopup="dialog" aria-label="Impostazioni" title="Impostazioni"><svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></button>
   </header>
 
   <div class="month">
@@ -382,6 +433,7 @@ dialog.dlg::backdrop { background: rgba(10, 20, 25, .45); }
       <input type="checkbox" id="f-off">
       <span>Offerto</span>
     </label>
+    <p class="form-foto" id="formFoto" hidden><svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M6 3h12v18l-3-2-3 2-3-2-3 2z M9 8h6M9 12h6" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round"/></svg><span>La foto dello scontrino verrà salvata con la spesa.</span></p>
     <div class="form-actions">
       <button class="primary" type="submit" id="save">Aggiungi</button>
       <button class="ghost" type="button" id="cancel">Annulla</button>
@@ -404,20 +456,73 @@ dialog.dlg::backdrop { background: rgba(10, 20, 25, .45); }
     <div class="empty"><strong>Caricamento…</strong>Le tue spese compariranno qui.</div>
   </section>
   <p class="note" id="note"></p>
-
-  <section class="backup" aria-labelledby="backupTitle">
-    <h2 id="backupTitle">Backup</h2>
-    <p>Le spese sono salvate solo su questo telefono. Esporta ogni tanto un backup (per esempio su Google Drive) per non perderle.</p>
-    <div class="backup-actions">
-      <button type="button" class="ghost" id="exportJson">Esporta backup</button>
-      <label class="ghost" for="importFile">Importa backup</label>
-      <input type="file" id="importFile" accept="application/json,.json" class="sr-only">
-      <button type="button" class="ghost" id="exportCsv">Esporta tutto in Excel</button>
-    </div>
-    <span class="form-msg" id="backupMsg" role="status"></span>
-    <p class="version"><span id="versione">Versione installata: —</span> · <a href="https://github.com/GiacomoRivolta06/Spese_pubblico/releases/latest">Cerca aggiornamenti</a></p>
-  </section>
 </div>
+
+<dialog class="dlg dlg-imp" id="impDlg" aria-labelledby="impTitle">
+  <div class="dlg-body">
+    <div class="dlg-head">
+      <h2 id="impTitle">Impostazioni</h2>
+      <button type="button" class="chiudi" id="chiudiImp" aria-label="Chiudi"><svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></button>
+    </div>
+
+    <section class="imp-sez" aria-labelledby="impScontrini">
+      <h3 id="impScontrini">Scontrini</h3>
+      <label class="interruttore" for="prefFoto">
+        <span class="testo"><b>Salva la foto dello scontrino</b><small>Come parte la casella quando fotografi uno scontrino. Con un solo conto non c'è la finestra di scelta: vale direttamente questa impostazione.</small></span>
+        <input type="checkbox" id="prefFoto" role="switch">
+      </label>
+      <p id="fotoSpazio"></p>
+    </section>
+
+    <section class="imp-sez" aria-labelledby="backupTitle">
+      <h3 id="backupTitle">Backup ed esportazione</h3>
+      <p>Le spese sono salvate solo su questo telefono. Esporta ogni tanto un backup (per esempio su Google Drive) per non perderle. Il backup non contiene le foto degli scontrini.</p>
+      <div class="backup-actions">
+        <button type="button" class="ghost" id="exportJson">Esporta backup</button>
+        <label class="ghost" for="importFile">Importa backup</label>
+        <input type="file" id="importFile" accept="application/json,.json" class="sr-only">
+        <button type="button" class="ghost" id="exportCsv">Esporta tutto in Excel</button>
+      </div>
+      <span class="form-msg" id="backupMsg" role="status"></span>
+    </section>
+
+    <section class="imp-sez" aria-labelledby="impApp">
+      <h3 id="impApp">App</h3>
+      <div class="ver-riga">
+        <span class="version" id="versione">Versione installata: —</span>
+        <button type="button" class="ghost" id="cercaAgg">Cerca aggiornamenti</button>
+      </div>
+      <div class="agg-esito" id="aggEsito" role="status"></div>
+    </section>
+  </div>
+</dialog>
+
+<dialog class="dlg" id="expDlg" aria-labelledby="expTitle">
+  <form method="dialog" class="dlg-body" id="expForm">
+    <h2 id="expTitle">Quali conti esporto?</h2>
+    <p class="dlg-sub" id="expSub"></p>
+    <ul class="conti-list" id="expList"></ul>
+    <span class="form-msg" id="expMsg" role="status"></span>
+    <div class="dlg-actions">
+      <button type="button" class="ghost" id="expAnnulla">Annulla</button>
+      <button type="button" class="primary" id="expOk">Esporta</button>
+    </div>
+  </form>
+</dialog>
+
+<dialog class="dlg dlg-foto" id="fotoDlg" aria-labelledby="fotoTitle">
+  <div class="dlg-body">
+    <div class="dlg-head">
+      <h2 id="fotoTitle">Scontrino</h2>
+      <button type="button" class="chiudi" id="chiudiFoto" aria-label="Chiudi"><svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></button>
+    </div>
+    <div class="foto-vista" id="fotoVista"></div>
+    <div class="foto-azioni">
+      <button type="button" class="link danger" id="fotoElimina">Elimina foto</button>
+      <button type="button" class="primary" id="fotoChiudi">Chiudi</button>
+    </div>
+  </div>
+</dialog>
 
 <dialog class="dlg" id="contiDlg" aria-labelledby="contiTitle">
   <form method="dialog" class="dlg-body" id="contiForm">
@@ -435,6 +540,10 @@ dialog.dlg::backdrop { background: rgba(10, 20, 25, .45); }
 
 <dialog class="dlg" id="scanDlg" aria-labelledby="scanDlgTitle">
   <div class="dlg-body">
+    <label class="foto-box" for="scanFoto">
+      <input type="checkbox" id="scanFoto">
+      <span>Salva la foto dello scontrino</span>
+    </label>
     <h2 id="scanDlgTitle">In che conto metto lo scontrino?</h2>
     <div class="scelta-conti" id="scanConti"></div>
     <div class="dlg-actions"><button type="button" class="ghost" id="scanDlgAnnulla">Annulla</button></div>
@@ -524,6 +633,7 @@ dialog.dlg::backdrop { background: rgba(10, 20, 25, .45); }
   let pendingDelete = null;
   let freshId = null;     // ultima spesa inserita da scontrino
   let tipiSugg = [];      // suggerimenti per la tipologia
+  let fotoInAttesa = null; // foto (base64) di uno scontrino da salvare quando si preme Aggiungi
 
   // ---- Conti: ogni spesa appartiene a un conto; si sceglie quali conti vedere ----
   // Il conto "Generali" esiste sempre; le spese senza conto (quelle di prima) stanno lì.
@@ -633,7 +743,7 @@ dialog.dlg::backdrop { background: rgba(10, 20, 25, .45); }
     $("totLabel").textContent = (searching ? "Totale dei risultati" : P.tot) + (filtered ? " · filtrato" : "");
     lastShown = inMonth;
     lastLabel = searching ? "ricerca" : P.label;
-    $("export").disabled = !inMonth.length;
+    $("export").disabled = !(inMonth.length || (multiConti() && righeDelPeriodo().length));
 
     // Il totale esclude le voci offerte: il loro importo resta solo nella riga "offerto"
     const tot = inMonth.filter(r => !r.offerto).reduce((s, r) => s + (r.prezzoCent || 0), 0);
@@ -852,6 +962,7 @@ dialog.dlg::backdrop { background: rgba(10, 20, 25, .45); }
     else if (e.key === "Escape") { e.preventDefault(); acClose(); }
   });
 
+  const ICONA_SCONTRINO = '<svg viewBox="0 0 24 24" width="13" height="13" aria-hidden="true"><path d="M6 3h12v18l-3-2-3 2-3-2-3 2z M9 8h6M9 12h6" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/></svg>';
   function rowEl(r) {
     const li = document.createElement("li"); li.className = "row" + (r.id === editingId ? " editing" : r.id === freshId ? " fresh" : "");
     const who = document.createElement("div"); who.className = "who";
@@ -864,6 +975,12 @@ dialog.dlg::backdrop { background: rgba(10, 20, 25, .45); }
     c.addEventListener("click", () => onlyTipo(tipoKey(r)));
     tags.append(c);
     if (r.offerto) { const g = document.createElement("span"); g.className = "chip gift"; g.textContent = "Offerto"; tags.append(g); }
+    if (r.foto) {
+      const f = document.createElement("button"); f.type = "button"; f.className = "chip chip-btn foto";
+      f.innerHTML = ICONA_SCONTRINO; f.append("Scontrino"); f.title = "Vedi la foto dello scontrino";
+      f.addEventListener("click", () => apriFoto(r.id));
+      tags.append(f);
+    }
     who.append(m);
     if (r.nota) { const nt = document.createElement("div"); nt.className = "nota"; nt.textContent = r.nota; who.append(nt); }
     who.append(tags);
@@ -904,6 +1021,7 @@ dialog.dlg::backdrop { background: rgba(10, 20, 25, .45); }
     $("f-data").value = keepDate;
     $("f-conto").value = contoPredefinito();
     updNotaCnt();
+    fotoInAttesa = null; $("formFoto").hidden = true;
     $("formTitle").textContent = "Nuova spesa";
     $("save").textContent = "Aggiungi";
   }
@@ -968,12 +1086,15 @@ dialog.dlg::backdrop { background: rgba(10, 20, 25, .45); }
     try {
       if (editingId) {
         const old = rows.find(r => r.id === editingId) || {};
-        await col.doc(editingId).set({ ...old.daScontrino ? { daScontrino: true } : {}, tipologia, esercente, prezzoCent, data, offerto, nota, conto, creato: old.creato || Date.now() });
+        await col.doc(editingId).set({ ...old.daScontrino ? { daScontrino: true } : {}, ...old.foto ? { foto: old.foto } : {}, tipologia, esercente, prezzoCent, data, offerto, nota, conto, creato: old.creato || Date.now() });
         esito("Modifica salvata." + (visibili.has(conto) ? "" : ` Ora è nel conto «${nomeConto(conto)}», che non stai guardando.`));
       } else {
-        await col.add({ tipologia, esercente, prezzoCent, data, offerto, nota, conto, creato: Date.now() });
+        // Spesa nata da uno scontrino letto a metà: la foto (se scelta) si salva solo adesso
+        let foto = null, fotoErr = false;
+        if (fotoInAttesa) { foto = await salvaFoto(fotoInAttesa); fotoErr = !foto; }
+        await col.add({ tipologia, esercente, prezzoCent, data, offerto, nota, conto, creato: Date.now(), ...foto ? { foto, daScontrino: true } : {} });
         try { localStorage.setItem("spese.ultimoConto", conto); } catch (e) {}
-        esito(visibili.has(conto) ? "Spesa aggiunta." : `Spesa aggiunta nel conto «${nomeConto(conto)}», che non stai guardando.`);
+        esito((visibili.has(conto) ? "Spesa aggiunta." : `Spesa aggiunta nel conto «${nomeConto(conto)}», che non stai guardando.`) + (fotoErr ? " La foto dello scontrino non è stata salvata." : ""), fotoErr);
       }
       anchor = parseDate(data);
       editingId = null;
@@ -1092,6 +1213,7 @@ dialog.dlg::backdrop { background: rgba(10, 20, 25, .45); }
     pulisciVisibili(); saveVisibili();
     const ok = await salvaTutto(() => { conti = prima.conti; store = prima.store; visibili.clear(); prima.vis.forEach(v => visibili.add(v)); saveVisibili(); });
     if (!ok) return;
+    if (dest === false) prima.store.forEach(r => { if (suoi.has(r.id) && r.foto) cancellaFoto(r.foto); });
     if (editingId && !store.some(r => r.id === editingId)) resetForm();
     if (!editingId) $("f-conto").value = contoPredefinito();
     contoAperto = null; eliminando = false;
@@ -1117,13 +1239,19 @@ dialog.dlg::backdrop { background: rgba(10, 20, 25, .45); }
   $("addConto").addEventListener("click", aggiungiConto);
   $("nuovoConto").addEventListener("keydown", (e) => { if (e.key === "Enter") { e.preventDefault(); aggiungiConto(); } });
   // tocco fuori dalla finestra: chiude
-  [contiDlg, $("scanDlg")].forEach(d => d.addEventListener("click", (e) => { if (e.target === d) d.close(); }));
+  [contiDlg, $("scanDlg"), $("impDlg"), $("expDlg"), $("fotoDlg")].forEach(d => d.addEventListener("click", (e) => { if (e.target === d) d.close(); }));
 
-  // ---- Scelta del conto per lo scontrino (solo con più conti) ----
+  // ---- Preferenza: salvare la foto dello scontrino (come parte la casella) ----
+  const prefFoto = () => { try { return localStorage.getItem("spese.salvaFoto") === "1"; } catch (e) { return false; } };
+  function setPrefFoto(v) { try { localStorage.setItem("spese.salvaFoto", v ? "1" : "0"); } catch (e) {} }
+
+  // ---- Scelta del conto per lo scontrino (solo con più conti), con la casella della foto in cima ----
+  // Risponde { conto, foto } oppure null se annullato
   function chiediConto() {
     return new Promise((resolve) => {
       const d = $("scanDlg"), box = $("scanConti");
       let scelto = null;
+      $("scanFoto").checked = prefFoto();
       const ordine = [...conti].sort((a, b) => (visibili.has(b.id) - visibili.has(a.id)));
       box.replaceChildren(...ordine.map(c => {
         const b = document.createElement("button"); b.type = "button"; b.textContent = c.nome;
@@ -1131,7 +1259,7 @@ dialog.dlg::backdrop { background: rgba(10, 20, 25, .45); }
         return b;
       }));
       $("scanDlgAnnulla").onclick = () => d.close();
-      d.addEventListener("close", () => resolve(scelto), { once: true });
+      d.addEventListener("close", () => resolve(scelto ? { conto: scelto, foto: $("scanFoto").checked } : null), { once: true });
       d.showModal();
       const pref = box.querySelectorAll("button")[ordine.findIndex(c => c.id === contoPredefinito())];
       if (pref) pref.focus();
@@ -1279,11 +1407,94 @@ dialog.dlg::backdrop { background: rgba(10, 20, 25, .45); }
     doc(id) {
       return {
         async set(d) { const i = store.findIndex(r => r.id === id); const row = { id, ...d }; if (i >= 0) store[i] = row; else store.push(row); await persist(); emit(); },
-        async delete() { store = store.filter(r => r.id !== id); await persist(); emit(); },
+        async delete() {
+          const r = store.find(x => x.id === id);
+          store = store.filter(x => x.id !== id); await persist(); emit();
+          if (r && r.foto) cancellaFoto(r.foto);
+        },
       };
     },
     onSnapshot(fn) { listeners.push(fn); fn({ docs: store.map(r => ({ id: r.id, data: () => { const { id, ...d } = r; return d; } })) }); return () => {}; },
   };
+
+  // ---- Foto degli scontrini: file JPEG nella memoria privata dell'app (cartella "scontrini") ----
+  // Nella spesa resta solo il percorso del file (campo "foto").
+  const FOTO_DIR = "scontrini";
+  // Rimpicciolisce la foto (lato lungo 1400 px, JPEG): leggibile ma leggera
+  async function comprimiFoto(b64, formato) {
+    const img = new Image();
+    img.src = `data:image/${formato || "jpeg"};base64,${b64}`;
+    await img.decode();
+    const k = Math.min(1, 1400 / Math.max(img.naturalWidth, img.naturalHeight));
+    const cv = document.createElement("canvas");
+    cv.width = Math.round(img.naturalWidth * k); cv.height = Math.round(img.naturalHeight * k);
+    const ctx = cv.getContext("2d");
+    ctx.fillStyle = "#fff"; ctx.fillRect(0, 0, cv.width, cv.height);
+    ctx.drawImage(img, 0, 0, cv.width, cv.height);
+    return cv.toDataURL("image/jpeg", 0.72).split(",")[1];
+  }
+  // Scrive la foto e risponde con il percorso, oppure null se non riesce
+  async function salvaFoto(b64) {
+    if (!FS || !b64) return null;
+    const path = `${FOTO_DIR}/${newId()}.jpg`;
+    try { await FS.writeFile({ path, directory: "DATA", data: b64, recursive: true }); return path; }
+    catch (e) { return null; }
+  }
+  function cancellaFoto(path) {
+    if (!FS || !path) return Promise.resolve();
+    return FS.deleteFile({ path, directory: "DATA" }).catch(() => {});
+  }
+  // Quante foto ci sono e quanto spazio occupano
+  async function spazioFoto() {
+    if (!FS) return null;
+    try {
+      const res = await FS.readdir({ path: FOTO_DIR, directory: "DATA" });
+      const files = (res.files || []).filter(f => typeof f !== "string");
+      return { n: files.length, byte: files.reduce((s, f) => s + (Number(f.size) || 0), 0) };
+    } catch (e) { return { n: 0, byte: 0 }; }
+  }
+
+  // Finestra della foto: si apre dalla spesa, permette di eliminare solo la foto
+  const fotoDlg = $("fotoDlg");
+  let fotoDi = null, fotoConferma = false;
+  async function apriFoto(id) {
+    const r = rows.find(x => x.id === id);
+    if (!r || !r.foto) return;
+    fotoDi = id; fotoConferma = false;
+    const vista = $("fotoVista");
+    $("fotoTitle").textContent = (esercName(r.esercente) || "Scontrino") + " · " + euro(r.prezzoCent);
+    $("fotoElimina").textContent = "Elimina foto"; $("fotoElimina").disabled = false;
+    vista.replaceChildren("Carico la foto…");
+    if (!fotoDlg.open) fotoDlg.showModal();
+    $("fotoChiudi").focus();
+    try {
+      const f = await FS.readFile({ path: r.foto, directory: "DATA" });
+      if (fotoDi !== id) return;
+      const img = document.createElement("img");
+      img.alt = "Foto dello scontrino di " + (esercName(r.esercente) || "questa spesa");
+      img.src = "data:image/jpeg;base64," + f.data;
+      vista.replaceChildren(img);
+    } catch (e) {
+      if (fotoDi === id) vista.replaceChildren("Foto non trovata sul telefono.");
+    }
+  }
+  fotoDlg.addEventListener("close", () => { fotoDi = null; $("fotoVista").replaceChildren(); });
+  $("chiudiFoto").addEventListener("click", () => fotoDlg.close());
+  $("fotoChiudi").addEventListener("click", () => fotoDlg.close());
+  $("fotoElimina").addEventListener("click", async () => {
+    const b = $("fotoElimina");
+    if (!fotoConferma) { fotoConferma = true; b.textContent = "Conferma: elimina la foto"; return; }
+    const r = store.find(x => x.id === fotoDi);
+    if (!r) { fotoDlg.close(); return; }
+    b.disabled = true;
+    const { foto, ...resto } = r;
+    try {
+      const { id, ...d } = resto;
+      await col.doc(id).set(d);
+      cancellaFoto(foto);
+      fotoDlg.close(); esito("Foto dello scontrino eliminata. La spesa resta.");
+    } catch (e) { b.disabled = false; b.textContent = "Riprova"; }
+  });
 
   // ---- Scansione scontrino: fotocamera + riconoscimento testo di Google (sul telefono) ----
   // Ricostruisce le righe dello scontrino dalle posizioni del testo,
@@ -1311,10 +1522,12 @@ dialog.dlg::backdrop { background: rgba(10, 20, 25, .45); }
     scanning = true;
     try {
       // Con più conti si sceglie prima dove mettere lo scontrino
-      let conto = baseId();
+      // (con un solo conto la finestra non compare: per la foto vale l'impostazione)
+      let conto = baseId(), conFoto = prefFoto();
       if (multiConti()) {
-        conto = await chiediConto();
-        if (!conto) { scanStatus(""); return; }
+        const s = await chiediConto();
+        if (!s) { scanStatus(""); return; }
+        conto = s.conto; conFoto = s.foto;
       }
       let photo;
       try {
@@ -1334,14 +1547,19 @@ dialog.dlg::backdrop { background: rgba(10, 20, 25, .45); }
         data: p.data || today(),
         conto,
       };
+      // Foto da conservare: rimpicciolita, per non riempire il telefono
+      let fotoB64 = null;
+      if (conFoto) { try { fotoB64 = await comprimiFoto(photo.base64String, photo.format); } catch (e) { fotoB64 = null; } }
       if (!p.prezzoCent || !p.sicuro || !p.esercente) {
         fillForm(voce);
+        if (fotoB64) { fotoInAttesa = fotoB64; $("formFoto").hidden = false; }
         scanStatus(p.prezzoCent
           ? "Ho compilato il modulo con quello che ho letto. Controlla i campi e premi Aggiungi."
           : "Non ho trovato il totale. Ho compilato quello che ho letto: completa il modulo e premi Aggiungi.");
         return;
       }
-      const full = { ...voce, offerto: false, creato: Date.now(), daScontrino: true };
+      const foto = fotoB64 ? await salvaFoto(fotoB64) : null;
+      const full = { ...voce, offerto: false, creato: Date.now(), daScontrino: true, ...foto ? { foto } : {} };
       const ref = await col.add(full);
       try { localStorage.setItem("spese.ultimoConto", conto); } catch (e) {}
       freshId = ref.id;
@@ -1349,7 +1567,8 @@ dialog.dlg::backdrop { background: rgba(10, 20, 25, .45); }
       render();
       const saved = { id: ref.id, ...full };
       const dove = multiConti() ? ` · in «${nomeConto(conto)}»${visibili.has(conto) ? "" : " (conto che non stai guardando)"}` : "";
-      scanStatus(`Aggiunta: ${full.esercente} · ${euro(full.prezzoCent)} · ${dayFmt.format(parseDate(full.data))}${p.data ? "" : " (data di oggi)"}${dove}`, {
+      const nf = !conFoto ? "" : foto ? " · foto salvata" : " · foto non salvata";
+      scanStatus(`Aggiunta: ${full.esercente} · ${euro(full.prezzoCent)} · ${dayFmt.format(parseDate(full.data))}${p.data ? "" : " (data di oggi)"}${dove}${nf}`, {
         actions: [
           ["Modifica", () => { scanStatus(""); startEdit(saved); }],
           ["Annulla", async () => {
@@ -1400,11 +1619,10 @@ dialog.dlg::backdrop { background: rgba(10, 20, 25, .45); }
   });
 
   // ---- Esportazione Excel (.xlsx) ----
-  function buildWorkbook(items) {
+  function buildWorkbook(items, conConto) {
     const X = window.XLSX;
     const EUR = '#,##0.00 "€"';
     const data = [...items].filter(r => r.data).sort((a, b) => a.data.localeCompare(b.data) || (a.creato || 0) - (b.creato || 0));
-    const conConto = multiConti();
     const aoa = [["Data", "Tipologia", "Esercente", "Nota", "Importo", "Offerto", ...(conConto ? ["Conto"] : [])]];
     // Date come numero di serie Excel (indipendente dal fuso orario del telefono)
     const serial = (s) => { const [y, m, d] = s.split("-").map(Number); return (Date.UTC(y, m - 1, d) - Date.UTC(1899, 11, 30)) / 86400000; };
@@ -1423,9 +1641,9 @@ dialog.dlg::backdrop { background: rgba(10, 20, 25, .45); }
     X.utils.book_append_sheet(wb, ws, "Spese");
     return X.write(wb, { bookType: "xlsx", type: "base64" });
   }
-  async function shareXlsx(name, items) {
+  async function shareXlsx(name, items, conConto) {
     if (!window.XLSX) throw new Error("xlsx");
-    const b64 = buildWorkbook(items);
+    const b64 = buildWorkbook(items, !!conConto);
     if (!(FS && Share)) return false;
     const w = await FS.writeFile({ path: name, directory: "CACHE", data: b64 });
     await Share.share({ title: "Spese (Excel)", files: [w.uri], dialogTitle: "Spese (Excel)" });
@@ -1434,17 +1652,67 @@ dialog.dlg::backdrop { background: rgba(10, 20, 25, .45); }
   function exMsg(t, err) { const m = $("exMsg"); m.textContent = t; m.className = "ex-msg" + (err ? " err" : ""); }
   const slug = (s) => norm(s).replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
 
+  // ---- Finestra "Quali conti esporto?" (solo con più conti) ----
+  // items: le spese candidate; pre: conti già spuntati. Risponde con l'insieme dei conti scelti, o null.
+  const expDlg = $("expDlg");
+  function chiediContiExport(items, pre, sotto) {
+    if (!multiConti()) return Promise.resolve(new Set(conti.map(c => c.id)));
+    return new Promise((resolve) => {
+      const conta = new Map(); items.forEach(r => { const k = contoOf(r); conta.set(k, (conta.get(k) || 0) + 1); });
+      const scelti = new Set(conti.filter(c => pre.has(c.id) && conta.get(c.id)).map(c => c.id));
+      if (!scelti.size) conti.forEach(c => { if (conta.get(c.id)) scelti.add(c.id); });
+      $("expSub").textContent = sotto;
+      const aggiorna = () => {
+        const n = items.filter(r => scelti.has(contoOf(r))).length;
+        $("expOk").disabled = !n;
+        $("expMsg").textContent = n ? `Esporto ${spese(n)}.` : "Scegli almeno un conto con delle spese.";
+      };
+      $("expList").replaceChildren(...conti.map(c => {
+        const li = el("li"), lab = el("label"), k = conta.get(c.id) || 0;
+        const cb = el("input"); cb.type = "checkbox"; cb.checked = scelti.has(c.id); cb.disabled = !k;
+        cb.addEventListener("change", () => { if (cb.checked) scelti.add(c.id); else scelti.delete(c.id); aggiorna(); });
+        lab.append(cb, el("span", "nome", c.nome), el("small", null, spese(k)));
+        li.append(lab); return li;
+      }));
+      aggiorna();
+      let ok = false;
+      $("expOk").onclick = () => { ok = true; expDlg.close(); };
+      $("expAnnulla").onclick = () => expDlg.close();
+      expDlg.addEventListener("close", () => resolve(ok ? new Set(scelti) : null), { once: true });
+      expDlg.showModal();
+      $("expOk").focus();
+    });
+  }
+  // Nome del file: con un solo conto scelto, il suo nome
+  const nomeFile = (scelti, coda) => {
+    const uno = scelti.size === 1 && multiConti() ? slug(nomeConto([...scelti][0])) : "";
+    return `spese-${uno ? uno + "-" : ""}${coda}.xlsx`;
+  };
+  // Spese del periodo (o della ricerca) mostrato, con le categorie nascoste escluse, di tutti i conti
+  function righeDelPeriodo() {
+    const P = period(), q = norm($("q").value.trim());
+    return rows.filter(r => r.data && !hidden.has(tipoKey(r)) && (q ? matches(r, q) : r.data >= P.start && r.data <= P.end));
+  }
+
   $("export").addEventListener("click", async () => {
-    if (!lastShown.length) return;
+    const cand = righeDelPeriodo();
+    if (!cand.length) return;
+    exMsg("");
+    const scelti = await chiediContiExport(cand, visibili, lastLabel === "ricerca" ? "Spese della ricerca attuale." : `Spese di: ${lastLabel}.`);
+    if (!scelti) return;
     try {
-      const ok = await shareXlsx(`spese-${slug(lastLabel)}.xlsx`, lastShown);
+      const ok = await shareXlsx(nomeFile(scelti, slug(lastLabel)), cand.filter(r => scelti.has(contoOf(r))), scelti.size > 1);
       exMsg(ok ? "" : "L'esportazione funziona nell'app installata.", !ok);
     } catch (e) { if (!/cancel/i.test(String(e && e.message))) exMsg("Esportazione non riuscita.", true); }
   });
 
   $("exportCsv").addEventListener("click", async () => {
+    backupMsg("");
+    if (!store.length) { backupMsg("Non ci sono spese da esportare."); return; }
+    const scelti = await chiediContiExport(store, new Set(conti.map(c => c.id)), "Tutte le spese, di ogni data.");
+    if (!scelti) return;
     try {
-      const ok = await shareXlsx(`spese-${stamp()}.xlsx`, store);
+      const ok = await shareXlsx(nomeFile(scelti, stamp()), store.filter(r => scelti.has(contoOf(r))), scelti.size > 1);
       backupMsg(ok ? "" : "L'esportazione funziona nell'app installata.", !ok);
     } catch (e) { if (!/cancel/i.test(String(e && e.message))) backupMsg("Esportazione non riuscita.", true); }
   });
@@ -1613,39 +1881,56 @@ dialog.dlg::backdrop { background: rgba(10, 20, 25, .45); }
     } catch (e) {}
   }
 
-  async function controllaAggiornamenti() {
-    if (navigator.onLine === false) return;
+  // Risponde con l'esito: { esito: "nuova", ver, path } | "aggiornata" | "scartata" | "offline" | "errore"
+  let controlloInterfaccia = null;
+  function controllaAggiornamenti() {
+    if (!controlloInterfaccia) controlloInterfaccia = controllaInterfaccia().finally(() => { controlloInterfaccia = null; });
+    return controlloInterfaccia;
+  }
+  async function controllaInterfaccia() {
+    if (navigator.onLine === false) return { esito: "offline" };
     try {
       await pulisciVersioni();
       const attuale = await versioneLocale();
       const rem = await fetch(UPD_URL + "versione.json?t=" + Date.now(), { cache: "no-store" }).then(r => r.ok ? r.json() : null);
       const nuova = rem && rem.versione;
-      if (!nuova || numVer(nuova) <= numVer(attuale) || lsGet("upd.scartata") === nuova) return;
+      if (!nuova) return { esito: "errore" };
+      if (numVer(nuova) <= numVer(attuale)) return { esito: "aggiornata", ver: attuale };
+      if (lsGet("upd.scartata") === nuova) return { esito: "scartata", ver: nuova };
+      // Già scaricata in questa sessione: non serve riscaricarla
+      let pronta = null; try { pronta = JSON.parse(lsGet("upd.pronta") || "null"); } catch (e) {}
+      if (pronta && pronta.ver === nuova && pronta.path) return { esito: "nuova", ver: nuova, path: pronta.path };
       const html = await fetch(UPD_URL + "index.html?t=" + Date.now(), { cache: "no-store" }).then(r => r.ok ? r.text() : null);
-      if (!htmlValida(html)) return;
+      if (!htmlValida(html)) return { esito: "errore" };
       const path = await preparaVersione(nuova, html);
       mostraAvviso(nuova, path);
-    } catch (e) { /* niente rete o GitHub non raggiungibile: si riprova al prossimo avvio */ }
+      return { esito: "nuova", ver: nuova, path };
+    } catch (e) { return { esito: "errore" }; /* niente rete o GitHub non raggiungibile: si riprova al prossimo avvio */ }
   }
 
   // ---- Aggiornamento dell'app (APK) dall'interno ----
   // Serve solo quando cambia la parte Android: apk.json nel repository pubblico dice qual è l'ultimo APK.
   // L'app lo scarica nella sua memoria privata, apre l'installazione e lo cancella una volta installato.
   const AGG = isNative ? plugin("Aggiornamento") : null;
+  // Risponde con l'esito: { esito: "nuova", rem } | "aggiornata" | "offline" | "errore"
   async function controllaApp() {
-    if (navigator.onLine === false) return;
+    if (navigator.onLine === false) return { esito: "offline" };
     try {
       const rem = await fetch(UPD_URL + "apk.json?t=" + Date.now(), { cache: "no-store" }).then(r => r.ok ? r.json() : null);
-      if (!rem || !rem.codice || !rem.url || !/^https:\/\/github\.com\//.test(rem.url)) return;
+      if (!rem || !rem.codice || !rem.url || !/^https:\/\/github\.com\//.test(rem.url)) return { esito: "errore" };
       // Un APK senza aggiornamento interno è per forza più vecchio di tutti quelli elencati in apk.json
       let installato = 0;
-      if (AGG) { try { installato = (await AGG.info()).codice || 0; } catch (e) { return; } }
-      if (rem.codice <= installato) return;
+      if (AGG) { try { installato = (await AGG.info()).codice || 0; } catch (e) { return { esito: "errore" }; } }
+      if (rem.codice <= installato) return { esito: "aggiornata" };
       mostraAvvisoApp(rem);
-    } catch (e) { /* si riprova al prossimo avvio */ }
+      return { esito: "nuova", rem };
+    } catch (e) { return { esito: "errore" }; /* si riprova al prossimo avvio */ }
   }
 
+  let avvisoAppDi = 0;
   function mostraAvvisoApp(rem) {
+    if (avvisoAppDi === rem.codice && $("appBox")) return; // già mostrato
+    avvisoAppDi = rem.codice;
     let box = $("appBox");
     if (!box) {
       box = document.createElement("div"); box.id = "appBox"; box.className = "upd"; box.setAttribute("role", "status");
@@ -1729,6 +2014,52 @@ dialog.dlg::backdrop { background: rgba(10, 20, 25, .45); }
     lsSet("upd.pronta", null);
     setTimeout(() => { controllaAggiornamenti(); controllaApp(); }, 3000);
   })();
+
+  // ---- Impostazioni: preferenza della foto, backup ed esportazione, versione e aggiornamenti ----
+  const impDlg = $("impDlg");
+  const mb = (b) => b < 1048576 ? Math.max(1, Math.round(b / 1024)) + " KB" : (b / 1048576).toLocaleString("it-IT", { maximumFractionDigits: b < 10485760 ? 1 : 0 }) + " MB";
+  async function aggiornaSpazioFoto() {
+    const s = await spazioFoto(), p = $("fotoSpazio");
+    p.textContent = !s ? "" : !s.n ? "Nessuna foto salvata finora." : `${s.n === 1 ? "1 foto salvata" : s.n + " foto salvate"} · ${mb(s.byte)}`;
+  }
+  function aggEsito(nodi, err) {
+    const box = $("aggEsito");
+    box.className = "agg-esito" + (err ? " err" : "");
+    box.replaceChildren(...[].concat(nodi || []));
+  }
+  $("impBtn").addEventListener("click", () => {
+    $("prefFoto").checked = prefFoto();
+    backupMsg(""); aggEsito(null);
+    aggiornaSpazioFoto();
+    impDlg.showModal();
+  });
+  $("chiudiImp").addEventListener("click", () => impDlg.close());
+  $("prefFoto").addEventListener("change", (e) => setPrefFoto(e.target.checked));
+
+  // Ricerca manuale: prima l'app (APK), poi l'interfaccia
+  $("cercaAgg").addEventListener("click", async () => {
+    const b = $("cercaAgg");
+    if (!isNative || !FS || !WV) { aggEsito("Gli aggiornamenti si cercano dall'app installata sul telefono."); return; }
+    b.disabled = true; b.textContent = "Controllo…"; aggEsito(null);
+    try {
+      const [ui, app] = await Promise.all([controllaAggiornamenti(), controllaApp()]);
+      if (app.esito === "nuova") {
+        const vai = btn("primary", "Vai all'installazione", () => { impDlg.close(); window.scrollTo({ top: 0 }); const x = $("appBox"); if (x) x.querySelector("button, a")?.focus(); });
+        aggEsito([el("span", null, `È disponibile la versione ${app.rem.versione} dell'app.`), vai]);
+      } else if (ui.esito === "nuova") {
+        const ora = btn("primary", "Aggiorna ora", () => { ora.disabled = true; applicaVersione(ui.ver, ui.path).catch(() => { ora.disabled = false; }); });
+        aggEsito([el("span", null, `Nuova versione ${ui.ver} pronta.`), ora]);
+      } else if (ui.esito === "offline" || app.esito === "offline") {
+        aggEsito("Sei offline: collegati a internet e riprova.", true);
+      } else if (ui.esito === "scartata") {
+        aggEsito(`La versione ${ui.ver} non è partita su questo telefono: aspetto la prossima.`, true);
+      } else if (ui.esito === "errore" && app.esito === "errore") {
+        aggEsito("Non riesco a controllare adesso. Riprova tra poco.", true);
+      } else {
+        aggEsito("Hai già l'ultima versione.");
+      }
+    } finally { b.disabled = false; b.textContent = "Cerca aggiornamenti"; }
+  });
 
   // Versione installata (scritta da GitHub durante la compilazione)
   fetch("versione.json").then(r => r.ok ? r.json() : null).then(v => {
