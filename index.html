@@ -365,7 +365,7 @@ input:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px 
     var n = (parseInt(ls.getItem("upd.avvii") || "0", 10) || 0) + 1;
     ls.setItem("upd.avvii", String(n));
     if (n < 2) return;
-    ls.removeItem("upd.prova"); ls.removeItem("upd.avvii"); ls.removeItem("upd.pronta");
+    ls.removeItem("upd.prova"); ls.removeItem("upd.avvii"); ls.removeItem("upd.pronta"); ls.removeItem("upd.attiva");
     ls.setItem("upd.scartata", prova);
     ls.setItem("upd.salva", "1");
     var prec = ls.getItem("upd.precedente") || "";
@@ -1190,8 +1190,22 @@ input:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px 
   const versioneLocale = () => fetch("versione.json").then(r => r.ok ? r.json() : null).then(v => (v && v.versione) || "").catch(() => "");
 
   // L'interfaccia è partita bene: la versione in prova diventa definitiva
+  let avvioSegnato = false;
   function segnaAvvioRiuscito() {
     if (lsGet("upd.prova")) { lsSet("upd.prova", null); lsSet("upd.avvii", null); }
+    if (avvioSegnato || !WV) return;
+    avvioSegnato = true;
+    // Ad ogni avvio riuscito da un'interfaccia scaricata, la si salva di nuovo come "da usare al prossimo avvio"
+    // e la si annota: se Android dovesse comunque ripartire dall'APK, l'app ci ritorna da sola.
+    (async () => {
+      try {
+        const p = (await WV.getServerBasePath()).path || "";
+        if (p.charAt(0) !== "/") return;
+        const ver = await versioneLocale();
+        if (ver) lsSet("upd.attiva", JSON.stringify({ ver: ver, path: p }));
+        await WV.persistServerBasePath();
+      } catch (e) {}
+    })();
   }
 
   const toB64 = (buf) => { const b = new Uint8Array(buf); let s = ""; for (let i = 0; i < b.length; i += 0x8000) s += String.fromCharCode.apply(null, b.subarray(i, i + 0x8000)); return btoa(s); };
@@ -1257,10 +1271,11 @@ input:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px 
     if (lsGet("upd.prova")) return;
     try {
       const cur = ((await WV.getServerBasePath()).path || "").split("/").pop();
+      let att = ""; try { att = (JSON.parse(lsGet("upd.attiva") || "null") || {}).ver || ""; } catch (e) {}
       const res = await FS.readdir({ path: UPD_DIR, directory: "DATA" });
       for (const f of res.files || []) {
         const name = typeof f === "string" ? f : f.name;
-        if (name && name !== cur) await FS.rmdir({ path: UPD_DIR + "/" + name, directory: "DATA", recursive: true }).catch(() => {});
+        if (name && name !== cur && name !== att) await FS.rmdir({ path: UPD_DIR + "/" + name, directory: "DATA", recursive: true }).catch(() => {});
       }
     } catch (e) {}
   }
@@ -1282,6 +1297,25 @@ input:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px 
 
   (async () => {
     if (!isNative || !FS || !WV) return;
+    // Android è ripartito dall'interfaccia dell'APK ma ne era già attiva una più recente: si torna a quella
+    if (!lsGet("upd.prova")) {
+      let att = null;
+      try { att = JSON.parse(lsGet("upd.attiva") || "null"); } catch (e) {}
+      if (att && att.ver && att.path) {
+        try {
+          const cur = (await WV.getServerBasePath()).path || "";
+          const attuale = await versioneLocale();
+          if (cur.charAt(0) !== "/") {
+            if (lsGet("upd.scartata") !== att.ver && numVer(att.ver) > numVer(attuale)) {
+              await FS.stat({ path: UPD_DIR + "/" + att.ver + "/index.html", directory: "DATA" });
+              await applicaVersione(att.ver, att.path);
+              return;
+            }
+            lsSet("upd.attiva", null); // l'APK installato è già più nuovo (o la versione è stata scartata)
+          }
+        } catch (e) { lsSet("upd.attiva", null); }
+      }
+    }
     // Una versione scaricata in un avvio precedente e non ancora applicata: la si usa adesso
     let pronta = null;
     try { pronta = JSON.parse(lsGet("upd.pronta") || "null"); } catch (e) {}
