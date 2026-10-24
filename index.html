@@ -205,6 +205,18 @@ input:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px 
 .scan-btn small { opacity: .85; font-size: .82rem; }
 .scan-btn:hover { filter: brightness(1.08); }
 .scan-btn.busy { opacity: .6; pointer-events: none; }
+.scan-btn.alt { background: var(--paper); color: var(--ink); border: 1px solid var(--line); }
+.scan-btn.alt svg { color: var(--accent); }
+.scan-btn.alt small { color: var(--muted); opacity: 1; }
+.scan-btn.alt:hover { filter: none; border-color: var(--accent); }
+.esito { margin: 0; background: var(--paper); border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; font-size: .9rem; }
+.esito.err { border-color: var(--danger); color: var(--danger); }
+/* Finestra della nuova spesa */
+dialog.dlg-spesa { width: min(560px, calc(100% - 24px)); max-height: calc(100% - 24px); }
+.dlg-spesa form.entry { border: 0; border-radius: 0; background: none; }
+.entry-head { grid-column: 1 / -1; display: flex; align-items: center; justify-content: space-between; gap: 8px; margin: -4px -6px -2px 0; }
+.chiudi { border: 0; background: none; color: var(--muted); width: 36px; height: 36px; border-radius: 8px; display: grid; place-items: center; flex: none; }
+.chiudi:hover { color: var(--ink); background: var(--bg); }
 .scan-status { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 12px; background: var(--paper); border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; font-size: .9rem; }
 .scan-status.err { border-color: var(--danger); color: var(--danger); }
 .scan-text { min-width: 0; }
@@ -313,19 +325,28 @@ dialog.dlg::backdrop { background: rgba(10, 20, 25, .45); }
     <div class="bars" id="bars" hidden></div>
   </section>
 
-  <section class="scan" id="scan" hidden>
-    <button type="button" class="scan-btn" id="scanBtn">
+  <section class="scan" id="scan">
+    <button type="button" class="scan-btn" id="scanBtn" hidden>
       <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" d="M4 8.5A1.5 1.5 0 0 1 5.5 7h2.2l1.4-2h5.8l1.4 2h2.2A1.5 1.5 0 0 1 20 8.5v9a1.5 1.5 0 0 1-1.5 1.5h-13A1.5 1.5 0 0 1 4 17.5z"/><circle cx="12" cy="12.8" r="3.4" fill="none" stroke="currentColor" stroke-width="1.8"/></svg>
       <span><b>Fotografa uno scontrino</b><small>Leggo totale, data ed esercente e aggiungo la spesa</small></span>
     </button>
+    <button type="button" class="scan-btn alt" id="nuovaBtn" aria-haspopup="dialog">
+      <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M12 5v14M5 12h14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+      <span><b>Nuova voce spesa</b><small>Inserisci a mano tipologia, esercente e prezzo</small></span>
+    </button>
+    <p class="esito" id="esito" role="status" hidden></p>
     <div class="scan-status" id="scanStatus" role="status" hidden>
       <span class="scan-text" id="scanText"></span>
       <div class="scan-actions" id="scanActions"></div>
     </div>
   </section>
 
+  <dialog class="dlg dlg-spesa" id="spesaDlg" aria-labelledby="formTitle">
   <form class="entry" id="form" autocomplete="off">
-    <h2 id="formTitle">Nuova spesa</h2>
+    <div class="entry-head">
+      <h2 id="formTitle">Nuova spesa</h2>
+      <button type="button" class="chiudi" id="chiudiSpesa" aria-label="Chiudi"><svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></button>
+    </div>
     <div class="field full quick" id="quick" hidden>
       <span class="quick-lab" id="quickLab">Aggiunta rapida</span>
       <div class="quick-list" id="quickList" role="group" aria-labelledby="quickLab"></div>
@@ -363,11 +384,12 @@ dialog.dlg::backdrop { background: rgba(10, 20, 25, .45); }
     </label>
     <div class="form-actions">
       <button class="primary" type="submit" id="save">Aggiungi</button>
-      <button class="ghost" type="button" id="cancel" hidden>Annulla</button>
+      <button class="ghost" type="button" id="cancel">Annulla</button>
       <span class="form-msg" id="msg" role="status"></span>
     </div>
     <datalist id="dl-eserc"></datalist>
   </form>
+  </dialog>
 
   <div class="toolbar">
     <div class="search">
@@ -870,11 +892,9 @@ dialog.dlg::backdrop { background: rgba(10, 20, 25, .45); }
     $("f-conto").value = contoOf(r);
     $("formTitle").textContent = "Modifica spesa";
     $("save").textContent = "Salva modifiche";
-    $("cancel").hidden = false;
-    setMsg("");
+    setMsg(""); esito("");
     render();
-    $("form").scrollIntoView({ behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth", block: "start" });
-    $("f-prezzo").focus();
+    apriSpesa();
   }
 
   function resetForm() {
@@ -886,7 +906,6 @@ dialog.dlg::backdrop { background: rgba(10, 20, 25, .45); }
     updNotaCnt();
     $("formTitle").textContent = "Nuova spesa";
     $("save").textContent = "Aggiungi";
-    $("cancel").hidden = true;
   }
 
   function updNotaCnt() {
@@ -896,13 +915,41 @@ dialog.dlg::backdrop { background: rgba(10, 20, 25, .45); }
   $("f-nota").addEventListener("input", updNotaCnt);
 
   function setMsg(t, err) { const m = $("msg"); m.textContent = t; m.className = "form-msg" + (err ? " err" : ""); }
+  let esitoTimer = null;
+  function esito(t, err) {
+    const e = $("esito"); clearTimeout(esitoTimer);
+    e.textContent = t || ""; e.hidden = !t; e.className = "esito" + (err ? " err" : "");
+    if (t && !err) esitoTimer = setTimeout(() => { e.hidden = true; }, 6000);
+  }
+
+  // ---- Finestra della spesa: nuova voce, modifica, completamento dello scontrino ----
+  const spesaDlg = $("spesaDlg");
+  function apriSpesa(focusId) {
+    acClose();
+    if (!spesaDlg.open) spesaDlg.showModal();
+    spesaDlg.scrollTop = 0;
+    if (focusId) $(focusId).focus();
+  }
+  function chiudiSpesa() { if (spesaDlg.open) spesaDlg.close(); }
+  // chiusa senza salvare (X, Annulla, tasto Esc): si scarta quello che c'era nel modulo
+  spesaDlg.addEventListener("close", () => {
+    acClose();
+    const eraModifica = !!editingId;
+    resetForm(); setMsg("");
+    if (eraModifica) render();
+  });
+  $("chiudiSpesa").addEventListener("click", chiudiSpesa);
+  $("nuovaBtn").addEventListener("click", () => {
+    resetForm(); setMsg(""); esito(""); renderQuick();
+    apriSpesa();
+  });
 
   async function onDelete(r) {
     if (pendingDelete !== r.id) { pendingDelete = r.id; render(); setTimeout(() => { if (pendingDelete === r.id) { pendingDelete = null; render(); } }, 4000); return; }
     pendingDelete = null;
     if (!col) return;
-    try { await col.doc(r.id).delete(); if (editingId === r.id) resetForm(); setMsg("Voce eliminata."); }
-    catch (e) { setMsg("Eliminazione non riuscita. Riprova.", true); }
+    try { await col.doc(r.id).delete(); if (editingId === r.id) resetForm(); esito("Voce eliminata."); }
+    catch (e) { esito("Eliminazione non riuscita. Riprova.", true); }
   }
 
   $("form").addEventListener("submit", async (ev) => {
@@ -922,21 +969,21 @@ dialog.dlg::backdrop { background: rgba(10, 20, 25, .45); }
       if (editingId) {
         const old = rows.find(r => r.id === editingId) || {};
         await col.doc(editingId).set({ ...old.daScontrino ? { daScontrino: true } : {}, tipologia, esercente, prezzoCent, data, offerto, nota, conto, creato: old.creato || Date.now() });
-        setMsg("Modifica salvata." + (visibili.has(conto) ? "" : ` Ora è nel conto «${nomeConto(conto)}», che non stai guardando.`));
+        esito("Modifica salvata." + (visibili.has(conto) ? "" : ` Ora è nel conto «${nomeConto(conto)}», che non stai guardando.`));
       } else {
         await col.add({ tipologia, esercente, prezzoCent, data, offerto, nota, conto, creato: Date.now() });
         try { localStorage.setItem("spese.ultimoConto", conto); } catch (e) {}
-        setMsg(visibili.has(conto) ? "Spesa aggiunta." : `Spesa aggiunta nel conto «${nomeConto(conto)}», che non stai guardando.`);
+        esito(visibili.has(conto) ? "Spesa aggiunta." : `Spesa aggiunta nel conto «${nomeConto(conto)}», che non stai guardando.`);
       }
       anchor = parseDate(data);
-      resetForm(); render();
-      if (document.activeElement && document.activeElement.blur) document.activeElement.blur();
+      editingId = null;
+      chiudiSpesa(); resetForm(); setMsg(""); render();
     } catch (e) {
       setMsg(e && e.code === "quota_exceeded" ? "Spazio esaurito: elimina qualche voce vecchia." : "Salvataggio non riuscito. Riprova.", true);
     } finally { $("save").disabled = false; }
   });
 
-  $("cancel").addEventListener("click", () => { resetForm(); setMsg(""); render(); });
+  $("cancel").addEventListener("click", chiudiSpesa);
   $("q").addEventListener("input", () => { exMsg(""); render(); });
   $("q").addEventListener("keydown", (e) => { if (e.key === "Escape" && $("q").value) { $("q").value = ""; render(); } });
   $("prev").addEventListener("click", () => shift(-1));
@@ -1327,8 +1374,7 @@ dialog.dlg::backdrop { background: rgba(10, 20, 25, .45); }
     if (v.prezzoCent) $("f-prezzo").value = centsToInput(v.prezzoCent);
     if (v.data) $("f-data").value = v.data;
     if (v.conto) $("f-conto").value = v.conto;
-    $("form").scrollIntoView({ behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth", block: "start" });
-    (v.prezzoCent ? $("f-eserc") : $("f-prezzo")).focus();
+    apriSpesa();
   }
 
   $("scanBtn").addEventListener("click", scanReceipt);
@@ -1454,7 +1500,7 @@ dialog.dlg::backdrop { background: rgba(10, 20, 25, .45); }
     pulisciVisibili(); saveVisibili();
     $("f-conto").value = contoPredefinito();
     col = localCol;
-    $("scan").hidden = !(Camera && OCR);
+    $("scanBtn").hidden = !(Camera && OCR);
     col.onSnapshot((snap) => {
       rows = snap.docs.map(d => ({ id: d.id, ...d.data() }));
       buildCanon();
