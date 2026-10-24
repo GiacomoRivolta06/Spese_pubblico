@@ -328,6 +328,10 @@ dialog.dlg-foto { width: min(560px, calc(100% - 16px)); max-height: calc(100% - 
 .foto-azioni { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
 .form-foto { grid-column: 1 / -1; display: flex; align-items: center; gap: 8px; font-size: .84rem; color: var(--muted); }
 .form-foto svg { color: var(--accent); flex: none; }
+.gf-testa { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; font-size: .82rem; color: var(--muted); margin-bottom: -4px; }
+.gf-testa .link { font-size: .82rem; }
+#gfOk.danger-btn { padding: 10px 16px; }
+#gfDopoBox span { font-weight: 500; font-size: .9rem; }
 @media (prefers-reduced-motion: reduce) { .interruttore input, .interruttore input::after { transition: none; } }
 
 .empty { background: var(--paper); border: 1px dashed var(--line); border-radius: 10px; padding: 24px 18px; text-align: center; color: var(--muted); }
@@ -468,10 +472,15 @@ dialog.dlg-foto { width: min(560px, calc(100% - 16px)); max-height: calc(100% - 
     <section class="imp-sez" aria-labelledby="impScontrini">
       <h3 id="impScontrini">Scontrini</h3>
       <label class="interruttore" for="prefFoto">
-        <span class="testo"><b>Salva la foto dello scontrino</b><small>Come parte la casella quando fotografi uno scontrino. Con un solo conto non c'è la finestra di scelta: vale direttamente questa impostazione.</small></span>
+        <span class="testo"><b>Salva la foto dello scontrino</b><small>Come parte la casella quando fotografi uno scontrino.</small></span>
         <input type="checkbox" id="prefFoto" role="switch">
       </label>
       <p id="fotoSpazio"></p>
+      <div class="backup-actions">
+        <button type="button" class="ghost" id="fotoEsporta">Esporta foto</button>
+        <button type="button" class="ghost" id="fotoEliminaSel">Elimina foto</button>
+      </div>
+      <span class="form-msg" id="fotoMsg" role="status"></span>
     </section>
 
     <section class="imp-sez" aria-labelledby="backupTitle">
@@ -510,6 +519,24 @@ dialog.dlg-foto { width: min(560px, calc(100% - 16px)); max-height: calc(100% - 
   </form>
 </dialog>
 
+<dialog class="dlg" id="gfDlg" aria-labelledby="gfTitle">
+  <div class="dlg-body">
+    <h2 id="gfTitle">Esporta foto</h2>
+    <p class="dlg-sub" id="gfSub"></p>
+    <div class="gf-testa"><span id="gfConta"></span><button type="button" class="link" id="gfTutti">Seleziona tutti</button></div>
+    <ul class="conti-list" id="gfList"></ul>
+    <label class="foto-box" id="gfDopoBox" for="gfDopo">
+      <input type="checkbox" id="gfDopo">
+      <span>Elimina le foto dal telefono dopo l'esportazione</span>
+    </label>
+    <span class="form-msg" id="gfMsg" role="status"></span>
+    <div class="dlg-actions">
+      <button type="button" class="ghost" id="gfIndietro">Annulla</button>
+      <button type="button" class="primary" id="gfOk">Avanti</button>
+    </div>
+  </div>
+</dialog>
+
 <dialog class="dlg dlg-foto" id="fotoDlg" aria-labelledby="fotoTitle">
   <div class="dlg-body">
     <div class="dlg-head">
@@ -538,7 +565,7 @@ dialog.dlg-foto { width: min(560px, calc(100% - 16px)); max-height: calc(100% - 
   </form>
 </dialog>
 
-<dialog class="dlg" id="scanDlg" aria-labelledby="scanDlgTitle">
+<dialog class="dlg" id="scanDlg" aria-label="Scontrino">
   <div class="dlg-body">
     <label class="foto-box" for="scanFoto">
       <input type="checkbox" id="scanFoto">
@@ -546,7 +573,7 @@ dialog.dlg-foto { width: min(560px, calc(100% - 16px)); max-height: calc(100% - 
     </label>
     <h2 id="scanDlgTitle">In che conto metto lo scontrino?</h2>
     <div class="scelta-conti" id="scanConti"></div>
-    <div class="dlg-actions"><button type="button" class="ghost" id="scanDlgAnnulla">Annulla</button></div>
+    <div class="dlg-actions"><button type="button" class="ghost" id="scanDlgAnnulla">Annulla</button><button type="button" class="primary" id="scanContinua" hidden>Continua</button></div>
   </div>
 </dialog>
 
@@ -1239,19 +1266,23 @@ dialog.dlg-foto { width: min(560px, calc(100% - 16px)); max-height: calc(100% - 
   $("addConto").addEventListener("click", aggiungiConto);
   $("nuovoConto").addEventListener("keydown", (e) => { if (e.key === "Enter") { e.preventDefault(); aggiungiConto(); } });
   // tocco fuori dalla finestra: chiude
-  [contiDlg, $("scanDlg"), $("impDlg"), $("expDlg"), $("fotoDlg")].forEach(d => d.addEventListener("click", (e) => { if (e.target === d) d.close(); }));
+  [contiDlg, $("scanDlg"), $("impDlg"), $("expDlg"), $("fotoDlg"), $("gfDlg")].forEach(d => d.addEventListener("click", (e) => { if (e.target === d) d.close(); }));
 
   // ---- Preferenza: salvare la foto dello scontrino (come parte la casella) ----
   const prefFoto = () => { try { return localStorage.getItem("spese.salvaFoto") === "1"; } catch (e) { return false; } };
   function setPrefFoto(v) { try { localStorage.setItem("spese.salvaFoto", v ? "1" : "0"); } catch (e) {} }
 
-  // ---- Scelta del conto per lo scontrino (solo con più conti), con la casella della foto in cima ----
-  // Risponde { conto, foto } oppure null se annullato
+  // ---- Finestra prima della foto: casella "salva la foto" in cima, poi (con più conti) la scelta del conto ----
+  // Con un solo conto c'è solo la casella e "Continua". Risponde { conto, foto } oppure null se annullato
   function chiediConto() {
     return new Promise((resolve) => {
       const d = $("scanDlg"), box = $("scanConti");
       let scelto = null;
       $("scanFoto").checked = prefFoto();
+      const piu = multiConti();
+      $("scanDlgTitle").hidden = box.hidden = !piu;
+      $("scanContinua").hidden = piu;
+      $("scanContinua").onclick = () => { scelto = baseId(); d.close(); };
       const ordine = [...conti].sort((a, b) => (visibili.has(b.id) - visibili.has(a.id)));
       box.replaceChildren(...ordine.map(c => {
         const b = document.createElement("button"); b.type = "button"; b.textContent = c.nome;
@@ -1261,7 +1292,7 @@ dialog.dlg-foto { width: min(560px, calc(100% - 16px)); max-height: calc(100% - 
       $("scanDlgAnnulla").onclick = () => d.close();
       d.addEventListener("close", () => resolve(scelto ? { conto: scelto, foto: $("scanFoto").checked } : null), { once: true });
       d.showModal();
-      const pref = box.querySelectorAll("button")[ordine.findIndex(c => c.id === contoPredefinito())];
+      const pref = piu ? box.querySelectorAll("button")[ordine.findIndex(c => c.id === contoPredefinito())] : $("scanContinua");
       if (pref) pref.focus();
     });
   }
@@ -1450,8 +1481,9 @@ dialog.dlg-foto { width: min(560px, calc(100% - 16px)); max-height: calc(100% - 
     try {
       const res = await FS.readdir({ path: FOTO_DIR, directory: "DATA" });
       const files = (res.files || []).filter(f => typeof f !== "string");
-      return { n: files.length, byte: files.reduce((s, f) => s + (Number(f.size) || 0), 0) };
-    } catch (e) { return { n: 0, byte: 0 }; }
+      const dim = new Map(files.map(f => [FOTO_DIR + "/" + f.name, Number(f.size) || 0]));
+      return { n: files.length, byte: files.reduce((s, f) => s + (Number(f.size) || 0), 0), dim };
+    } catch (e) { return { n: 0, byte: 0, dim: new Map() }; }
   }
 
   // Finestra della foto: si apre dalla spesa, permette di eliminare solo la foto
@@ -1522,13 +1554,9 @@ dialog.dlg-foto { width: min(560px, calc(100% - 16px)); max-height: calc(100% - 
     scanning = true;
     try {
       // Con più conti si sceglie prima dove mettere lo scontrino
-      // (con un solo conto la finestra non compare: per la foto vale l'impostazione)
-      let conto = baseId(), conFoto = prefFoto();
-      if (multiConti()) {
-        const s = await chiediConto();
-        if (!s) { scanStatus(""); return; }
-        conto = s.conto; conFoto = s.foto;
-      }
+      const s = await chiediConto();
+      if (!s) { scanStatus(""); return; }
+      const conto = s.conto, conFoto = s.foto;
       let photo;
       try {
         photo = await Camera.getPhoto({
@@ -2021,6 +2049,189 @@ dialog.dlg-foto { width: min(560px, calc(100% - 16px)); max-height: calc(100% - 
   async function aggiornaSpazioFoto() {
     const s = await spazioFoto(), p = $("fotoSpazio");
     p.textContent = !s ? "" : !s.n ? "Nessuna foto salvata finora." : `${s.n === 1 ? "1 foto salvata" : s.n + " foto salvate"} · ${mb(s.byte)}`;
+    const nessuna = !store.some(r => r.foto);
+    $("fotoEsporta").disabled = $("fotoEliminaSel").disabled = nessuna;
+  }
+  function fotoMsg(t, err) { const m = $("fotoMsg"); m.textContent = t; m.className = "form-msg" + (err ? " err" : ""); }
+
+  // ---- Esporta / elimina foto: prima i conti (se più di uno), poi i mesi ----
+  // L'esportazione crea un unico file .zip (le foto così come sono) e lo apre nella condivisione di Android.
+  const gfDlg = $("gfDlg");
+  const gf = { modo: "esporta", passo: "conti", conti: new Set(), mesi: new Set(), conferma: false, busy: false, dim: new Map() };
+  const conFoto = () => store.filter(r => r.foto && r.data);
+  const meseDi = (r) => r.data.slice(0, 7);
+  const fotoN = (n) => n === 1 ? "1 foto" : `${n} foto`;
+  const fotoScelte = () => conFoto().filter(r => gf.conti.has(contoOf(r)) && gf.mesi.has(meseDi(r)));
+
+  async function apriGestioneFoto(modo) {
+    if (gf.busy) return;
+    fotoMsg("");
+    gf.modo = modo; gf.conferma = false;
+    gf.dim = ((await spazioFoto()) || {}).dim || new Map();
+    const tutte = conFoto();
+    if (!tutte.length) { fotoMsg("Non ci sono foto salvate."); return; }
+    gf.conti = new Set(tutte.map(contoOf));
+    gf.mesi = new Set();
+    $("gfDopo").checked = false;
+    if (multiConti()) gf.passo = "conti"; else vaiAiMesi();
+    $("gfTitle").textContent = modo === "esporta" ? "Esporta foto" : "Elimina foto";
+    renderGf();
+    gfDlg.showModal();
+  }
+  function vaiAiMesi() {
+    gf.passo = "mesi"; gf.conferma = false;
+    // Esporta: tutti i mesi spuntati; elimina: nessuno, si sceglie cosa cancellare
+    gf.mesi = gf.modo === "esporta" ? new Set(conFoto().filter(r => gf.conti.has(contoOf(r))).map(meseDi)) : new Set();
+  }
+
+  function renderGf() {
+    const ul = $("gfList"), mesi = gf.passo === "mesi", piu = multiConti();
+    const elimina = gf.modo === "elimina";
+    $("gfSub").textContent = mesi ? (piu ? "2 · Scegli i mesi" : "Scegli i mesi") : "1 · Scegli i conti";
+    let voci;
+    if (!mesi) {
+      const conta = new Map(); conFoto().forEach(r => { const k = contoOf(r); conta.set(k, (conta.get(k) || 0) + 1); });
+      voci = conti.map(c => ({ id: c.id, nome: c.nome, n: conta.get(c.id) || 0, set: gf.conti }));
+    } else {
+      const conta = new Map(); conFoto().filter(r => gf.conti.has(contoOf(r))).forEach(r => { const k = meseDi(r); conta.set(k, (conta.get(k) || 0) + 1); });
+      voci = [...conta.keys()].sort().reverse().map(k => ({ id: k, nome: monthFmt.format(parseDate(k + "-01")), n: conta.get(k), set: gf.mesi }));
+    }
+    const attive = voci.filter(v => v.n);
+    const tutteSpuntate = attive.length && attive.every(v => v.set.has(v.id));
+    $("gfTutti").textContent = tutteSpuntate ? "Togli tutti" : "Seleziona tutti";
+    $("gfTutti").onclick = () => { attive.forEach(v => tutteSpuntate ? v.set.delete(v.id) : v.set.add(v.id)); gf.conferma = false; renderGf(); };
+    ul.replaceChildren(...voci.map(v => {
+      const li = el("li"), lab = el("label");
+      const cb = el("input"); cb.type = "checkbox"; cb.checked = v.set.has(v.id); cb.disabled = !v.n || gf.busy;
+      cb.addEventListener("change", () => { if (cb.checked) v.set.add(v.id); else v.set.delete(v.id); gf.conferma = false; renderGf(); });
+      const nome = el("span", "nome", v.nome); nome.style.textTransform = mesi ? "capitalize" : "";
+      lab.append(cb, nome, el("small", null, fotoN(v.n)));
+      li.append(lab); return li;
+    }));
+    $("gfDopoBox").hidden = !mesi || elimina;
+    const scelte = mesi ? fotoScelte() : conFoto().filter(r => gf.conti.has(contoOf(r)));
+    const byte = scelte.reduce((s, r) => s + (gf.dim.get(r.foto) || 0), 0);
+    $("gfConta").textContent = scelte.length ? `${fotoN(scelte.length)}${byte ? " · " + mb(byte) : ""}` : "Nessuna foto scelta";
+    $("gfIndietro").textContent = mesi && piu ? "Indietro" : "Annulla";
+    $("gfIndietro").disabled = gf.busy;
+    const ok = $("gfOk");
+    ok.className = elimina && mesi ? "danger-btn" : "primary";
+    ok.disabled = gf.busy || !scelte.length;
+    if (!gf.busy) ok.textContent = !mesi ? "Avanti" : !elimina ? `Esporta ${fotoN(scelte.length)}` : gf.conferma ? `Conferma: elimina ${fotoN(scelte.length)}` : `Elimina ${fotoN(scelte.length)}`;
+    if (!gf.busy) $("gfMsg").textContent = elimina && mesi && gf.conferma ? "Le foto vengono cancellate dal telefono. Le spese restano." : "";
+  }
+  $("gfIndietro").addEventListener("click", () => {
+    if (gf.passo === "mesi" && multiConti()) { gf.passo = "conti"; gf.conferma = false; renderGf(); }
+    else gfDlg.close();
+  });
+  gfDlg.addEventListener("cancel", (e) => { if (gf.busy) e.preventDefault(); });
+  gfDlg.addEventListener("close", () => { aggiornaSpazioFoto(); });
+  $("gfOk").addEventListener("click", async () => {
+    if (gf.busy) return;
+    if (gf.passo === "conti") { vaiAiMesi(); renderGf(); return; }
+    const scelte = fotoScelte();
+    if (!scelte.length) return;
+    if (gf.modo === "elimina") {
+      if (!gf.conferma) { gf.conferma = true; renderGf(); return; }
+      gf.busy = true; renderGf(); $("gfOk").textContent = "Elimino…";
+      try { await togliFoto(scelte); gfDlg.close(); fotoMsg(`Eliminate ${fotoN(scelte.length)}. Le spese restano.`); }
+      catch (e) { $("gfMsg").textContent = "Eliminazione non riuscita. Riprova."; }
+      finally { gf.busy = false; if (gfDlg.open) renderGf(); }
+      return;
+    }
+    gf.busy = true; renderGf();
+    const dopo = $("gfDopo").checked;
+    try {
+      const r = await esportaFoto(scelte, (i, n) => { $("gfOk").textContent = `Preparo ${i}/${n}…`; });
+      if (!r) { $("gfMsg").textContent = "L'esportazione funziona nell'app installata."; return; }
+      if (!r.inclusi.length) { $("gfMsg").textContent = "Nessuna foto trovata sul telefono."; return; }
+      let t = `Esportate ${fotoN(r.inclusi.length)}.`;
+      if (r.mancanti) t += ` ${fotoN(r.mancanti)} non trovate sul telefono.`;
+      if (dopo) { await togliFoto(r.inclusi); t += " Foto eliminate dal telefono."; }
+      gf.busy = false; gfDlg.close(); fotoMsg(t);
+    } catch (e) {
+      const annullata = /cancel/i.test(String(e && e.message));
+      $("gfMsg").textContent = annullata ? "Esportazione annullata" + (dopo ? ": nessuna foto eliminata." : ".") : "Esportazione non riuscita.";
+    } finally { gf.busy = false; if (gfDlg.open) renderGf(); }
+  });
+  $("fotoEsporta").addEventListener("click", () => apriGestioneFoto("esporta"));
+  $("fotoEliminaSel").addEventListener("click", () => apriGestioneFoto("elimina"));
+
+  // Toglie le foto dalle spese (un solo salvataggio), poi cancella i file
+  async function togliFoto(lista) {
+    const ids = new Set(lista.map(r => r.id)), file = [];
+    const prima = store;
+    store = store.map(r => { if (!ids.has(r.id) || !r.foto) return r; file.push(r.foto); const { foto, ...resto } = r; return resto; });
+    try { await persist(); } catch (e) { store = prima; throw e; }
+    emit();
+    for (const f of file) await cancellaFoto(f);
+  }
+
+  // ---- Archivio .zip senza compressione (le foto JPEG sono già compresse), scritto a pezzi ----
+  const CRC_T = (() => { const t = new Uint32Array(256); for (let n = 0; n < 256; n++) { let c = n; for (let k = 0; k < 8; k++) c = c & 1 ? 0xEDB88320 ^ (c >>> 1) : c >>> 1; t[n] = c >>> 0; } return t; })();
+  const crc32 = (b) => { let c = 0xFFFFFFFF; for (let i = 0; i < b.length; i++) c = CRC_T[(c ^ b[i]) & 0xFF] ^ (c >>> 8); return (c ^ 0xFFFFFFFF) >>> 0; };
+  const daB64 = (s) => { const bin = atob(s); const u = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) u[i] = bin.charCodeAt(i); return u; };
+  const nomeSicuro = (s) => String(s || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^\w .,'&-]+/g, "").replace(/\s+/g, " ").trim().slice(0, 40);
+
+  // Risponde { inclusi, mancanti }, oppure null fuori dall'app installata
+  async function esportaFoto(lista, avanzamento) {
+    if (!(FS && Share)) return null;
+    const nome = `scontrini-${stamp()}.zip`;
+    // via gli archivi delle esportazioni precedenti
+    try {
+      const vecchi = await FS.readdir({ path: "", directory: "CACHE" });
+      for (const f of vecchi.files || []) { const n = typeof f === "string" ? f : f.name; if (/^scontrini-.*\.zip$/.test(n || "")) await FS.deleteFile({ path: n, directory: "CACHE" }).catch(() => {}); }
+    } catch (e) {}
+    const ordinate = [...lista].sort((a, b) => a.data.localeCompare(b.data) || (a.creato || 0) - (b.creato || 0));
+    const piuConti = new Set(ordinate.map(contoOf)).size > 1;
+    const enc = new TextEncoder(), usati = new Set(), centrale = [], inclusi = [];
+    let off = 0, mancanti = 0, primo = true, i = 0;
+    const scrivi = async (bytes) => {
+      const data = toB64(bytes);
+      if (primo) { await FS.writeFile({ path: nome, directory: "CACHE", data }); primo = false; }
+      else await FS.appendFile({ path: nome, directory: "CACHE", data });
+    };
+    for (const r of ordinate) {
+      avanzamento(++i, ordinate.length);
+      let dati;
+      try { dati = daB64((await FS.readFile({ path: r.foto, directory: "DATA" })).data); } catch (e) { mancanti++; continue; }
+      // Nome: [conto/]data_esercente_importo.jpg
+      let base = `${r.data}_${nomeSicuro(esercName(r.esercente)) || "scontrino"}_${centsToInput(r.prezzoCent || 0)}`;
+      if (piuConti) base = (nomeSicuro(nomeConto(contoOf(r))) || "conto") + "/" + base;
+      let nomeFile = base + ".jpg", k = 2;
+      while (usati.has(nomeFile)) nomeFile = `${base} (${k++}).jpg`;
+      usati.add(nomeFile);
+      const nb = enc.encode(nomeFile), crc = crc32(dati);
+      const [y, m, d] = r.data.split("-").map(Number);
+      const dosData = ((Math.max(1980, y) - 1980) << 9) | (m << 5) | d, dosOra = 12 << 11;
+      const h = new DataView(new ArrayBuffer(30));
+      h.setUint32(0, 0x04034b50, true); h.setUint16(4, 20, true); h.setUint16(6, 0x0800, true); h.setUint16(8, 0, true);
+      h.setUint16(10, dosOra, true); h.setUint16(12, dosData, true); h.setUint32(14, crc, true);
+      h.setUint32(18, dati.length, true); h.setUint32(22, dati.length, true); h.setUint16(26, nb.length, true); h.setUint16(28, 0, true);
+      const pezzo = new Uint8Array(30 + nb.length + dati.length);
+      pezzo.set(new Uint8Array(h.buffer), 0); pezzo.set(nb, 30); pezzo.set(dati, 30 + nb.length);
+      await scrivi(pezzo);
+      centrale.push({ nb, crc, size: dati.length, off, dosData, dosOra });
+      off += pezzo.length;
+      inclusi.push(r);
+    }
+    if (!inclusi.length) return { inclusi, mancanti };
+    const dimC = centrale.reduce((s, c) => s + 46 + c.nb.length, 0);
+    const fine = new Uint8Array(dimC + 22), dv = new DataView(fine.buffer);
+    let p = 0;
+    for (const c of centrale) {
+      dv.setUint32(p, 0x02014b50, true); dv.setUint16(p + 4, 20, true); dv.setUint16(p + 6, 20, true); dv.setUint16(p + 8, 0x0800, true); dv.setUint16(p + 10, 0, true);
+      dv.setUint16(p + 12, c.dosOra, true); dv.setUint16(p + 14, c.dosData, true); dv.setUint32(p + 16, c.crc, true);
+      dv.setUint32(p + 20, c.size, true); dv.setUint32(p + 24, c.size, true); dv.setUint16(p + 28, c.nb.length, true);
+      dv.setUint32(p + 42, c.off, true);
+      fine.set(c.nb, p + 46); p += 46 + c.nb.length;
+    }
+    dv.setUint32(p, 0x06054b50, true); dv.setUint16(p + 8, centrale.length, true); dv.setUint16(p + 10, centrale.length, true);
+    dv.setUint32(p + 12, dimC, true); dv.setUint32(p + 16, off, true);
+    await scrivi(fine);
+    const uri = (await FS.getUri({ path: nome, directory: "CACHE" })).uri;
+    await Share.share({ title: "Foto degli scontrini", files: [uri], dialogTitle: "Salva le foto degli scontrini" });
+    return { inclusi, mancanti };
   }
   function aggEsito(nodi, err) {
     const box = $("aggEsito");
@@ -2029,7 +2240,7 @@ dialog.dlg-foto { width: min(560px, calc(100% - 16px)); max-height: calc(100% - 
   }
   $("impBtn").addEventListener("click", () => {
     $("prefFoto").checked = prefFoto();
-    backupMsg(""); aggEsito(null);
+    backupMsg(""); fotoMsg(""); aggEsito(null);
     aggiornaSpazioFoto();
     impDlg.showModal();
   });
