@@ -224,6 +224,36 @@ input:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px 
 .backup-actions .ghost { font-size: .88rem; cursor: pointer; color: var(--ink); }
 .backup-actions label:has(+ input:focus-visible) { outline: 2px solid var(--accent); outline-offset: 2px; }
 
+/* Conti: pulsante nel titolo, finestre di scelta, etichetta sopra le voci */
+header.top h1 { min-width: 0; flex: 0 1 auto; }
+.conti-btn { border: 0; background: none; padding: 2px 6px 2px 0; margin: 0; display: inline-flex; align-items: center; gap: 6px; max-width: 100%;
+  font: inherit; font-family: var(--f-display); font-weight: 700; font-size: 1.6rem; letter-spacing: -0.01em; color: var(--ink); border-radius: 8px; text-align: left; }
+.conti-btn .nome { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+.conti-btn svg { flex: none; color: var(--muted); }
+.conti-btn:hover svg { color: var(--accent); }
+.row .conto-lab { font-size: .7rem; text-transform: uppercase; letter-spacing: .07em; color: var(--muted); font-weight: 600; margin-bottom: 1px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+select { font: inherit; color: var(--ink); background: var(--bg); border: 1px solid var(--line); border-radius: 8px; padding: 9px 10px; width: 100%; min-width: 0; }
+select:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+dialog.dlg { border: 1px solid var(--line); border-radius: 12px; padding: 0; background: var(--paper); color: var(--ink);
+  width: min(420px, calc(100% - 32px)); max-height: calc(100% - 32px); overflow: auto; box-shadow: 0 12px 40px rgba(0,0,0,.25); }
+dialog.dlg::backdrop { background: rgba(10, 20, 25, .45); }
+.dlg-body { display: flex; flex-direction: column; gap: 12px; padding: 18px 16px 16px; margin: 0; }
+.dlg-body h2 { margin: 0; font-family: var(--f-display); font-weight: 600; font-size: 1.1rem; }
+.dlg-sub { margin: -6px 0 0; color: var(--muted); font-size: .86rem; }
+.conti-list { list-style: none; margin: 0; padding: 0; border: 1px solid var(--line); border-radius: 10px; }
+.conti-list li { border-top: 1px solid var(--line); }
+.conti-list li:first-child { border-top: 0; }
+.conti-list label { display: flex; align-items: center; gap: 12px; padding: 11px 12px; cursor: pointer; user-select: none; }
+.conti-list input { width: 20px; height: 20px; margin: 0; accent-color: var(--accent); flex: none; }
+.conti-list .nome { flex: 1; min-width: 0; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.conti-list small { color: var(--muted); font-size: .8rem; flex: none; }
+.nuovo-conto { display: flex; gap: 8px; }
+.nuovo-conto input { flex: 1; }
+.dlg-actions { display: flex; justify-content: flex-end; gap: 8px; }
+.scelta-conti { display: flex; flex-direction: column; gap: 8px; }
+.scelta-conti button { border: 1px solid var(--line); background: var(--bg); border-radius: 8px; padding: 12px 14px; text-align: left; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.scelta-conti button:hover, .scelta-conti button:focus-visible { border-color: var(--accent); background: var(--accent-soft); }
+
 .empty { background: var(--paper); border: 1px dashed var(--line); border-radius: 10px; padding: 24px 18px; text-align: center; color: var(--muted); }
 .empty strong { display: block; color: var(--ink); font-family: var(--f-display); font-size: 1.05rem; margin-bottom: 4px; }
 .note { font-size: .82rem; color: var(--muted); text-align: center; }
@@ -241,7 +271,7 @@ input:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px 
 <body>
 <div class="wrap">
   <header class="top">
-    <h1>Spese</h1>
+    <h1><button type="button" class="conti-btn" id="contiBtn" aria-haspopup="dialog" title="Scegli i conti"><span class="nome" id="contiNome">Spese</span><svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M7 10l5 5 5-5" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></button></h1>
     <div class="seg" role="group" aria-label="Periodo">
       <button type="button" id="v-week" data-view="week">Settimana</button>
       <button type="button" id="v-month" data-view="month">Mese</button>
@@ -305,6 +335,10 @@ input:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px 
       <label for="f-data">Data</label>
       <input type="date" id="f-data" required>
     </div>
+    <div class="field full" id="contoField" hidden>
+      <label for="f-conto">Conto</label>
+      <select id="f-conto"></select>
+    </div>
     <div class="field full">
       <label for="f-nota" class="lab-row">Nota <span class="cnt" id="notaCnt">0/20</span></label>
       <input type="text" id="f-nota" maxlength="20" placeholder="Facoltativa, max 20 caratteri">
@@ -348,6 +382,28 @@ input:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px 
     <p class="version"><span id="versione">Versione installata: —</span> · <a href="https://github.com/GiacomoRivolta06/Spese_pubblico/releases/latest">Cerca aggiornamenti</a></p>
   </section>
 </div>
+
+<dialog class="dlg" id="contiDlg" aria-labelledby="contiTitle">
+  <form method="dialog" class="dlg-body" id="contiForm">
+    <h2 id="contiTitle">Conti</h2>
+    <p class="dlg-sub">Scegli quali conti vedere.</p>
+    <ul class="conti-list" id="contiList"></ul>
+    <div class="nuovo-conto">
+      <input type="text" id="nuovoConto" maxlength="30" placeholder="Nome del nuovo conto" aria-label="Nome del nuovo conto" autocomplete="off">
+      <button type="button" class="ghost" id="addConto">Aggiungi</button>
+    </div>
+    <span class="form-msg" id="contiMsg" role="status"></span>
+    <div class="dlg-actions"><button class="primary" value="ok">Fatto</button></div>
+  </form>
+</dialog>
+
+<dialog class="dlg" id="scanDlg" aria-labelledby="scanDlgTitle">
+  <div class="dlg-body">
+    <h2 id="scanDlgTitle">In che conto metto lo scontrino?</h2>
+    <div class="scelta-conti" id="scanConti"></div>
+    <div class="dlg-actions"><button type="button" class="ghost" id="scanDlgAnnulla">Annulla</button></div>
+  </div>
+</dialog>
 
 <script>
 // Protezione degli aggiornamenti automatici: se una nuova interfaccia non riesce a partire
@@ -433,6 +489,41 @@ input:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px 
   let freshId = null;     // ultima spesa inserita da scontrino
   let tipiSugg = [];      // suggerimenti per la tipologia
 
+  // ---- Conti: ogni spesa appartiene a un conto; si sceglie quali conti vedere ----
+  // Il conto "Generali" esiste sempre; le spese senza conto (quelle di prima) stanno lì.
+  const CONTO_BASE = "generale";
+  let conti = [{ id: CONTO_BASE, nome: "Generali" }];
+  const visibili = new Set();
+  try { (JSON.parse(localStorage.getItem("spese.contiVisibili") || "[]") || []).forEach(id => visibili.add(String(id))); } catch (e) {}
+  if (!visibili.size) visibili.add(CONTO_BASE);
+  function saveVisibili() { try { localStorage.setItem("spese.contiVisibili", JSON.stringify([...visibili])); } catch (e) {} }
+  const contoOf = (r) => (r && r.conto && conti.some(c => c.id === r.conto)) ? r.conto : CONTO_BASE;
+  const nomeConto = (id) => (conti.find(c => c.id === id) || conti[0]).nome;
+  const multiConti = () => conti.length > 1;
+  const multiVisibili = () => multiConti() && conti.filter(c => visibili.has(c.id)).length > 1;
+  // Tiene solo conti esistenti e almeno uno visibile
+  function pulisciVisibili() {
+    [...visibili].forEach(id => { if (!conti.some(c => c.id === id)) visibili.delete(id); });
+    if (!visibili.size) conti.forEach(c => visibili.add(c.id));
+  }
+  function contoPredefinito() {
+    let u = null; try { u = localStorage.getItem("spese.ultimoConto"); } catch (e) {}
+    if (u && visibili.has(u) && conti.some(c => c.id === u)) return u;
+    const v = conti.find(c => visibili.has(c.id));
+    return v ? v.id : CONTO_BASE;
+  }
+  // Titolo in alto, campo "Conto" nel modulo (solo con più conti)
+  function aggiornaConti() {
+    const vis = conti.filter(c => visibili.has(c.id));
+    const label = !multiConti() ? "Spese" : vis.length === 1 ? vis[0].nome : vis.length === conti.length ? "Tutti i conti" : `${vis.length} conti`;
+    $("contiNome").textContent = label;
+    $("contiBtn").setAttribute("aria-label", "Conti: " + label);
+    $("contoField").hidden = !multiConti();
+    const sel = $("f-conto"), cur = sel.value;
+    sel.replaceChildren(...conti.map(c => { const o = document.createElement("option"); o.value = c.id; o.textContent = c.nome; return o; }));
+    sel.value = conti.some(c => c.id === cur) ? cur : contoPredefinito();
+  }
+
   // Tipologie ed esercenti si confrontano senza badare a maiuscole/minuscole
   const keyOf = (s) => String(s || "").trim().toLocaleLowerCase("it-IT");
   // Grafia mostrata: quella usata più spesso per lo stesso nome
@@ -496,7 +587,8 @@ input:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px 
     $("monthLabel").textContent = searching ? "Ricerca in tutte le date" : P.label;
     $("prev").disabled = $("next").disabled = searching;
     document.querySelectorAll(".seg button").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.view === view)));
-    const all = rows.filter(r => r.data && (searching ? matches(r, q) : r.data >= P.start && r.data <= P.end))
+    aggiornaConti();
+    const all = rows.filter(r => r.data && visibili.has(contoOf(r)) && (searching ? matches(r, q) : r.data >= P.start && r.data <= P.end))
       .sort((a, b) => (b.data || "").localeCompare(a.data || "") || (b.creato || 0) - (a.creato || 0));
     const inMonth = all.filter(r => !hidden.has(tipoKey(r)));
     const filtered = inMonth.length !== all.length;
@@ -646,7 +738,7 @@ input:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px 
   function renderQuick() {
     const box = $("quick"), ql = $("quickList");
     const byKey = new Map();
-    const recent = [...rows].filter(r => r.esercente)
+    const recent = [...rows].filter(r => r.esercente && visibili.has(contoOf(r)))
       .sort((a, b) => (b.data || "").localeCompare(a.data || "") || (b.creato || 0) - (a.creato || 0));
     recent.forEach(r => {
       const k = keyOf(r.esercente);
@@ -673,6 +765,7 @@ input:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px 
     $("f-eserc").value = esercName(r.esercente);
     $("f-prezzo").value = "";
     $("f-data").value = today();
+    if (visibili.has(contoOf(r))) $("f-conto").value = contoOf(r);
     setMsg("Inserisci il prezzo e premi Aggiungi.");
     $("f-prezzo").focus();
   }
@@ -724,6 +817,7 @@ input:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px 
   function rowEl(r) {
     const li = document.createElement("li"); li.className = "row" + (r.id === editingId ? " editing" : r.id === freshId ? " fresh" : "");
     const who = document.createElement("div"); who.className = "who";
+    if (multiVisibili()) { const cl = document.createElement("div"); cl.className = "conto-lab"; cl.textContent = nomeConto(contoOf(r)); who.append(cl); }
     const m = document.createElement("div"); m.className = "merchant"; m.textContent = r.esercente || "—";
     const tags = document.createElement("div"); tags.className = "tags";
     if (showDates && r.data) { const dt = document.createElement("span"); dt.className = "when"; dt.textContent = shortFmt.format(parseDate(r.data)); tags.append(dt); }
@@ -757,6 +851,7 @@ input:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px 
     $("f-data").value = r.data || today();
     $("f-off").checked = !!r.offerto;
     $("f-nota").value = r.nota || ""; updNotaCnt();
+    $("f-conto").value = contoOf(r);
     $("formTitle").textContent = "Modifica spesa";
     $("save").textContent = "Salva modifiche";
     $("cancel").hidden = false;
@@ -771,6 +866,7 @@ input:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px 
     const keepDate = $("f-data").value || today();
     $("form").reset();
     $("f-data").value = keepDate;
+    $("f-conto").value = contoPredefinito();
     updNotaCnt();
     $("formTitle").textContent = "Nuova spesa";
     $("save").textContent = "Aggiungi";
@@ -801,6 +897,7 @@ input:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px 
     const data = $("f-data").value;
     const offerto = $("f-off").checked;
     const nota = $("f-nota").value.trim().slice(0, 20);
+    const conto = conti.some(c => c.id === $("f-conto").value) ? $("f-conto").value : CONTO_BASE;
     if (!tipologia || !esercente || !data) { setMsg("Compila tipologia, esercente e data.", true); return; }
     if (Number.isNaN(prezzoCent)) { setMsg("Prezzo non valido: scrivi ad esempio 12,50.", true); $("f-prezzo").focus(); return; }
     if (!col) { setMsg("Il salvataggio non è disponibile in questa vista.", true); return; }
@@ -808,11 +905,12 @@ input:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px 
     try {
       if (editingId) {
         const old = rows.find(r => r.id === editingId) || {};
-        await col.doc(editingId).set({ ...old.daScontrino ? { daScontrino: true } : {}, tipologia, esercente, prezzoCent, data, offerto, nota, creato: old.creato || Date.now() });
-        setMsg("Modifica salvata.");
+        await col.doc(editingId).set({ ...old.daScontrino ? { daScontrino: true } : {}, tipologia, esercente, prezzoCent, data, offerto, nota, conto, creato: old.creato || Date.now() });
+        setMsg("Modifica salvata." + (visibili.has(conto) ? "" : ` Ora è nel conto «${nomeConto(conto)}», che non stai guardando.`));
       } else {
-        await col.add({ tipologia, esercente, prezzoCent, data, offerto, nota, creato: Date.now() });
-        setMsg("Spesa aggiunta.");
+        await col.add({ tipologia, esercente, prezzoCent, data, offerto, nota, conto, creato: Date.now() });
+        try { localStorage.setItem("spese.ultimoConto", conto); } catch (e) {}
+        setMsg(visibili.has(conto) ? "Spesa aggiunta." : `Spesa aggiunta nel conto «${nomeConto(conto)}», che non stai guardando.`);
       }
       anchor = parseDate(data);
       resetForm(); render();
@@ -829,6 +927,71 @@ input:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px 
   $("next").addEventListener("click", () => shift(1));
   $("monthLabel").addEventListener("click", () => { anchor = new Date(); anchor.setHours(0, 0, 0, 0); render(); });
   document.querySelectorAll(".seg button").forEach(b => b.addEventListener("click", () => setView(b.dataset.view)));
+
+  // ---- Finestra dei conti: quali vedere, aggiungerne di nuovi ----
+  const contiDlg = $("contiDlg");
+  function contiMsg(t, err) { const m = $("contiMsg"); m.textContent = t; m.className = "form-msg" + (err ? " err" : ""); }
+  function renderContiList() {
+    const ul = $("contiList");
+    const nVis = conti.filter(c => visibili.has(c.id)).length;
+    const conta = new Map(); rows.forEach(r => { const k = contoOf(r); conta.set(k, (conta.get(k) || 0) + 1); });
+    ul.replaceChildren(...conti.map(c => {
+      const li = document.createElement("li");
+      const lab = document.createElement("label");
+      const cb = document.createElement("input"); cb.type = "checkbox"; cb.checked = visibili.has(c.id);
+      // almeno un conto resta sempre visibile
+      cb.disabled = cb.checked && nVis === 1;
+      cb.addEventListener("change", () => {
+        if (cb.checked) visibili.add(c.id); else visibili.delete(c.id);
+        pulisciVisibili(); saveVisibili();
+        if (!editingId) $("f-conto").value = contoPredefinito();
+        render(); renderContiList();
+      });
+      const n = document.createElement("span"); n.className = "nome"; n.textContent = c.nome;
+      const k = conta.get(c.id) || 0;
+      const s = document.createElement("small"); s.textContent = k === 1 ? "1 spesa" : `${k} spese`;
+      lab.append(cb, n, s); li.append(lab); return li;
+    }));
+  }
+  async function aggiungiConto() {
+    const nome = $("nuovoConto").value.trim().replace(/\s+/g, " ").slice(0, 30);
+    if (!nome) { contiMsg("Scrivi il nome del conto.", true); $("nuovoConto").focus(); return; }
+    if (conti.some(c => keyOf(c.nome) === keyOf(nome))) { contiMsg(`Il conto «${nome}» esiste già.`, true); $("nuovoConto").focus(); return; }
+    const c = { id: newId(), nome };
+    conti.push(c); visibili.add(c.id); saveVisibili();
+    try { await persist(); } catch (e) { conti = conti.filter(x => x.id !== c.id); visibili.delete(c.id); saveVisibili(); contiMsg("Salvataggio non riuscito. Riprova.", true); return; }
+    $("nuovoConto").value = "";
+    contiMsg(`Conto «${nome}» aggiunto.`);
+    render(); renderContiList();
+  }
+  $("contiBtn").addEventListener("click", () => {
+    contiMsg(""); $("nuovoConto").value = "";
+    renderContiList();
+    contiDlg.showModal();
+  });
+  $("addConto").addEventListener("click", aggiungiConto);
+  $("nuovoConto").addEventListener("keydown", (e) => { if (e.key === "Enter") { e.preventDefault(); aggiungiConto(); } });
+  // tocco fuori dalla finestra: chiude
+  [contiDlg, $("scanDlg")].forEach(d => d.addEventListener("click", (e) => { if (e.target === d) d.close(); }));
+
+  // ---- Scelta del conto per lo scontrino (solo con più conti) ----
+  function chiediConto() {
+    return new Promise((resolve) => {
+      const d = $("scanDlg"), box = $("scanConti");
+      let scelto = null;
+      const ordine = [...conti].sort((a, b) => (visibili.has(b.id) - visibili.has(a.id)));
+      box.replaceChildren(...ordine.map(c => {
+        const b = document.createElement("button"); b.type = "button"; b.textContent = c.nome;
+        b.addEventListener("click", () => { scelto = c.id; d.close(); });
+        return b;
+      }));
+      $("scanDlgAnnulla").onclick = () => d.close();
+      d.addEventListener("close", () => resolve(scelto), { once: true });
+      d.showModal();
+      const pref = box.querySelectorAll("button")[ordine.findIndex(c => c.id === contoPredefinito())];
+      if (pref) pref.focus();
+    });
+  }
 
   // ---- Scansione scontrino ----
   function scanStatus(text, { busy = false, err = false, actions = [] } = {}) {
@@ -954,7 +1117,7 @@ input:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px 
   }
   let writing = Promise.resolve();
   function persist() {
-    const payload = JSON.stringify({ versione: 1, spese: store });
+    const payload = JSON.stringify({ versione: 1, spese: store, conti });
     writing = writing.then(async () => {
       if (FS) await FS.writeFile({ path: DATA_FILE, directory: "DATA", data: payload, encoding: "utf8" });
       else localStorage.setItem(LS_KEY, payload);
@@ -1002,6 +1165,12 @@ input:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px 
     if (!Camera || !OCR || scanning) return;
     scanning = true;
     try {
+      // Con più conti si sceglie prima dove mettere lo scontrino
+      let conto = CONTO_BASE;
+      if (multiConti()) {
+        conto = await chiediConto();
+        if (!conto) { scanStatus(""); return; }
+      }
       let photo;
       try {
         photo = await Camera.getPhoto({
@@ -1018,6 +1187,7 @@ input:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px 
         esercente: p.esercente,
         prezzoCent: p.prezzoCent,
         data: p.data || today(),
+        conto,
       };
       if (!p.prezzoCent || !p.sicuro || !p.esercente) {
         fillForm(voce);
@@ -1028,11 +1198,13 @@ input:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px 
       }
       const full = { ...voce, offerto: false, creato: Date.now(), daScontrino: true };
       const ref = await col.add(full);
+      try { localStorage.setItem("spese.ultimoConto", conto); } catch (e) {}
       freshId = ref.id;
       anchor = parseDate(full.data);
       render();
       const saved = { id: ref.id, ...full };
-      scanStatus(`Aggiunta: ${full.esercente} · ${euro(full.prezzoCent)} · ${dayFmt.format(parseDate(full.data))}${p.data ? "" : " (data di oggi)"}`, {
+      const dove = multiConti() ? ` · in «${nomeConto(conto)}»${visibili.has(conto) ? "" : " (conto che non stai guardando)"}` : "";
+      scanStatus(`Aggiunta: ${full.esercente} · ${euro(full.prezzoCent)} · ${dayFmt.format(parseDate(full.data))}${p.data ? "" : " (data di oggi)"}${dove}`, {
         actions: [
           ["Modifica", () => { scanStatus(""); startEdit(saved); }],
           ["Annulla", async () => {
@@ -1056,6 +1228,7 @@ input:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px 
     if (v.esercente) $("f-eserc").value = v.esercente;
     if (v.prezzoCent) $("f-prezzo").value = centsToInput(v.prezzoCent);
     if (v.data) $("f-data").value = v.data;
+    if (v.conto) $("f-conto").value = v.conto;
     $("form").scrollIntoView({ behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth", block: "start" });
     (v.prezzoCent ? $("f-eserc") : $("f-prezzo")).focus();
   }
@@ -1077,7 +1250,7 @@ input:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px 
 
   $("exportJson").addEventListener("click", async () => {
     try {
-      const ok = await shareFile(`registro-spese-${stamp()}.json`, JSON.stringify({ versione: 1, spese: store }, null, 1), "Backup Registro Spese");
+      const ok = await shareFile(`registro-spese-${stamp()}.json`, JSON.stringify({ versione: 1, spese: store, conti }, null, 1), "Backup Registro Spese");
       backupMsg(ok ? "" : "L'esportazione funziona nell'app installata.", !ok);
     } catch (e) { if (!/cancel/i.test(String(e && e.message))) backupMsg("Esportazione non riuscita.", true); }
   });
@@ -1087,10 +1260,11 @@ input:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px 
     const X = window.XLSX;
     const EUR = '#,##0.00 "€"';
     const data = [...items].filter(r => r.data).sort((a, b) => a.data.localeCompare(b.data) || (a.creato || 0) - (b.creato || 0));
-    const aoa = [["Data", "Tipologia", "Esercente", "Nota", "Importo", "Offerto"]];
+    const conConto = multiConti();
+    const aoa = [["Data", "Tipologia", "Esercente", "Nota", "Importo", "Offerto", ...(conConto ? ["Conto"] : [])]];
     // Date come numero di serie Excel (indipendente dal fuso orario del telefono)
     const serial = (s) => { const [y, m, d] = s.split("-").map(Number); return (Date.UTC(y, m - 1, d) - Date.UTC(1899, 11, 30)) / 86400000; };
-    data.forEach(r => aoa.push([serial(r.data), r.tipologia ? tipoName(tipoKey(r)) : "", esercName(r.esercente), r.nota || "", (r.prezzoCent || 0) / 100, r.offerto ? "Sì" : "No"]));
+    data.forEach(r => aoa.push([serial(r.data), r.tipologia ? tipoName(tipoKey(r)) : "", esercName(r.esercente), r.nota || "", (r.prezzoCent || 0) / 100, r.offerto ? "Sì" : "No", ...(conConto ? [nomeConto(contoOf(r))] : [])]));
     const ws = X.utils.aoa_to_sheet(aoa);
     const last = data.length + 1;
     for (let i = 2; i <= last; i++) { if (ws["A" + i]) ws["A" + i].z = "dd/mm/yyyy"; if (ws["E" + i]) ws["E" + i].z = EUR; }
@@ -1100,7 +1274,7 @@ input:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px 
       ["Totale (escluse offerte)", "", "", "", { t: "n", v: tot, f: `SUMIF(F2:F${last},"No",E2:E${last})`, z: EUR }, ""],
       ["Offerto", "", "", "", { t: "n", v: off, f: `SUMIF(F2:F${last},"Sì",E2:E${last})`, z: EUR }, ""],
     ], { origin: "A" + (last + 1) });
-    ws["!cols"] = [{ wch: 11 }, { wch: 16 }, { wch: 26 }, { wch: 22 }, { wch: 12 }, { wch: 8 }];
+    ws["!cols"] = [{ wch: 11 }, { wch: 16 }, { wch: 26 }, { wch: 22 }, { wch: 12 }, { wch: 8 }, ...(conConto ? [{ wch: 16 }] : [])];
     const wb = X.utils.book_new();
     X.utils.book_append_sheet(wb, ws, "Spese");
     return X.write(wb, { bookType: "xlsx", type: "base64" });
@@ -1139,17 +1313,28 @@ input:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px 
       const obj = JSON.parse(await file.text());
       const list = Array.isArray(obj) ? obj : obj.spese;
       if (!Array.isArray(list)) throw new Error("formato");
+      // Conti del backup: quelli con lo stesso nome si uniscono a quelli già presenti
+      const mappa = new Map([[CONTO_BASE, CONTO_BASE]]);
+      let nuoviConti = 0;
+      (Array.isArray(obj.conti) ? obj.conti : []).forEach(c => {
+        if (!c || !c.id || !String(c.nome || "").trim()) return;
+        const id = String(c.id), nome = String(c.nome).trim().slice(0, 30);
+        const uguale = conti.find(x => x.id === id) || conti.find(x => keyOf(x.nome) === keyOf(nome));
+        if (uguale) { mappa.set(id, uguale.id); return; }
+        conti.push({ id, nome }); visibili.add(id); mappa.set(id, id); nuoviConti++;
+      });
+      if (nuoviConti) saveVisibili();
       const have = new Set(store.map(r => r.id));
       let added = 0;
       list.forEach(r => {
         if (!r || !r.data || !Number.isFinite(Number(r.prezzoCent))) return;
         if (r.id && have.has(r.id)) return; // già presente
         const id = r.id ? String(r.id) : newId();
-        store.push({ id, tipologia: String(r.tipologia || "Altro"), esercente: String(r.esercente || ""), prezzoCent: Number(r.prezzoCent), data: String(r.data), offerto: !!r.offerto, nota: String(r.nota || "").slice(0, 20), creato: Number(r.creato) || Date.now() });
+        store.push({ id, tipologia: String(r.tipologia || "Altro"), esercente: String(r.esercente || ""), prezzoCent: Number(r.prezzoCent), data: String(r.data), offerto: !!r.offerto, nota: String(r.nota || "").slice(0, 20), conto: mappa.get(String(r.conto || CONTO_BASE)) || CONTO_BASE, creato: Number(r.creato) || Date.now() });
         have.add(id); added++;
       });
       await persist(); emit();
-      backupMsg(added ? `Importate ${added} spese.` : "Nessuna spesa nuova da importare.");
+      backupMsg((added ? `Importate ${added} spese.` : "Nessuna spesa nuova da importare.") + (nuoviConti ? (nuoviConti === 1 ? " Aggiunto 1 conto." : ` Aggiunti ${nuoviConti} conti.`) : ""));
     } catch (e) { backupMsg("File non valido: scegli un backup esportato da Registro Spese.", true); }
   });
 
@@ -1165,7 +1350,12 @@ input:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px 
       try { await persist(); } catch (e) {}
     } else {
       store = Array.isArray(saved.spese) ? saved.spese : [];
+      const salvati = Array.isArray(saved.conti) ? saved.conti.filter(c => c && c.id && String(c.nome || "").trim()) : [];
+      const base = salvati.find(c => c.id === CONTO_BASE) || conti[0];
+      conti = [base, ...salvati.filter(c => c.id !== CONTO_BASE).map(c => ({ id: String(c.id), nome: String(c.nome) }))];
     }
+    pulisciVisibili(); saveVisibili();
+    $("f-conto").value = contoPredefinito();
     col = localCol;
     $("scan").hidden = !(Camera && OCR);
     col.onSnapshot((snap) => {
