@@ -345,7 +345,7 @@ input:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px 
       <button type="button" class="ghost" id="exportCsv">Esporta tutto in Excel</button>
     </div>
     <span class="form-msg" id="backupMsg" role="status"></span>
-    <p class="version"><span id="versione">Versione installata: —</span> · <a href="https://github.com/GiacomoRivolta06/Spese/releases/latest">Cerca aggiornamenti</a></p>
+    <p class="version"><span id="versione">Versione installata: —</span> · <a href="https://github.com/GiacomoRivolta06/Spese_pubblico/releases/latest">Cerca aggiornamenti</a></p>
   </section>
 </div>
 
@@ -1295,6 +1295,70 @@ input:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px 
     } catch (e) { /* niente rete o GitHub non raggiungibile: si riprova al prossimo avvio */ }
   }
 
+  // ---- Aggiornamento dell'app (APK) dall'interno ----
+  // Serve solo quando cambia la parte Android: apk.json nel repository pubblico dice qual è l'ultimo APK.
+  // L'app lo scarica nella sua memoria privata, apre l'installazione e lo cancella una volta installato.
+  const AGG = isNative ? plugin("Aggiornamento") : null;
+  async function controllaApp() {
+    if (navigator.onLine === false) return;
+    try {
+      const rem = await fetch(UPD_URL + "apk.json?t=" + Date.now(), { cache: "no-store" }).then(r => r.ok ? r.json() : null);
+      if (!rem || !rem.codice || !rem.url || !/^https:\/\/github\.com\//.test(rem.url)) return;
+      // Un APK senza aggiornamento interno è per forza più vecchio di tutti quelli elencati in apk.json
+      let installato = 0;
+      if (AGG) { try { installato = (await AGG.info()).codice || 0; } catch (e) { return; } }
+      if (rem.codice <= installato) return;
+      mostraAvvisoApp(rem);
+    } catch (e) { /* si riprova al prossimo avvio */ }
+  }
+
+  function mostraAvvisoApp(rem) {
+    let box = $("appBox");
+    if (!box) {
+      box = document.createElement("div"); box.id = "appBox"; box.className = "upd"; box.setAttribute("role", "status");
+      (document.querySelector(".wrap") || document.body).prepend(box);
+    }
+    const t = document.createElement("span"); t.textContent = "Nuova versione dell'app " + rem.versione + " disponibile.";
+    const n = document.createElement("small");
+    if (!AGG) {
+      // APK vecchio, senza aggiornamento interno: un'ultima volta si scarica dal browser
+      const a = document.createElement("a"); a.href = rem.url; a.className = "primary"; a.textContent = "Scarica";
+      n.textContent = "Aprilo dal telefono per installarlo. Dalla prossima volta l'app si aggiornerà da sola e il file verrà cancellato. Le spese restano.";
+      box.replaceChildren(t, a, n);
+      return;
+    }
+    const b = document.createElement("button"); b.type = "button"; b.className = "primary"; b.textContent = "Installa";
+    n.textContent = "Le spese restano. Il file scaricato viene cancellato da solo dopo l'installazione.";
+    let attesaPermesso = false, ascolto = null;
+    async function installa() {
+      const r = await AGG.installa();
+      if (r && r.permesso === false) {
+        attesaPermesso = true;
+        n.textContent = "Android chiede il permesso una volta sola: attiva \"Consenti da questa fonte\" per Spese e torna qui, l'installazione parte da sola.";
+      } else {
+        n.textContent = "Conferma l'installazione nella finestra di Android.";
+      }
+      b.disabled = false; b.textContent = "Installa";
+    }
+    document.addEventListener("visibilitychange", () => {
+      if (document.visibilityState !== "visible" || !attesaPermesso) return;
+      AGG.info().then(i => { if (i.permesso) { attesaPermesso = false; installa().catch(() => {}); } }).catch(() => {});
+    });
+    b.addEventListener("click", async () => {
+      b.disabled = true; b.textContent = "Download…";
+      try {
+        if (!ascolto && AGG.addListener) ascolto = await AGG.addListener("progresso", (p) => { b.textContent = "Download " + p.percentuale + "%"; });
+        await AGG.scarica({ url: rem.url, codice: rem.codice });
+        b.textContent = "Installazione…";
+        await installa();
+      } catch (e) {
+        b.disabled = false; b.textContent = "Riprova";
+        n.textContent = "Download non riuscito (" + ((e && e.message) || "errore") + "). Controlla la connessione e riprova.";
+      }
+    });
+    box.replaceChildren(t, b, n);
+  }
+
   (async () => {
     if (!isNative || !FS || !WV) return;
     // Android è ripartito dall'interfaccia dell'APK ma ne era già attiva una più recente: si torna a quella
@@ -1330,7 +1394,7 @@ input:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px 
       }
     }
     lsSet("upd.pronta", null);
-    setTimeout(controllaAggiornamenti, 3000);
+    setTimeout(() => { controllaAggiornamenti(); controllaApp(); }, 3000);
   })();
 
   // Versione installata (scritta da GitHub durante la compilazione)
