@@ -301,6 +301,11 @@ dialog.dlg::backdrop { background: rgba(10, 20, 25, .45); }
 .foto-box input { width: 20px; height: 20px; margin: 0; accent-color: var(--accent); flex: none; }
 .foto-box span { font-weight: 600; }
 .foto-box:has(input:checked) { border-color: var(--accent); background: var(--accent-soft); }
+/* Preferenza "salva la foto" di ogni conto (nuovo conto e matita) */
+.spunta { display: flex; align-items: center; gap: 10px; font-size: .9rem; cursor: pointer; user-select: none; }
+.spunta input { width: 20px; height: 20px; margin: 0; accent-color: var(--accent); flex: none; }
+.conti-list .conto-edit .spunta { padding: 0; gap: 10px; }
+.conti-list .cam { flex: none; color: var(--accent); display: grid; place-items: center; }
 
 /* Impostazioni */
 dialog.dlg-imp { width: min(460px, calc(100% - 24px)); }
@@ -477,10 +482,7 @@ dialog.dlg-foto { width: min(560px, calc(100% - 16px)); max-height: calc(100% - 
 
     <section class="imp-sez" aria-labelledby="impScontrini">
       <h3 id="impScontrini">Scontrini</h3>
-      <label class="interruttore" for="prefFoto">
-        <span class="testo"><b>Salva la foto dello scontrino</b><small>Come parte la casella quando fotografi uno scontrino.</small></span>
-        <input type="checkbox" id="prefFoto" role="switch">
-      </label>
+      <p>Se salvare la foto dello scontrino dipende dal conto: lo scegli quando crei un conto o lo modifichi con la matita (tocca il nome in alto).</p>
       <p id="fotoSpazio"></p>
       <div class="backup-actions">
         <button type="button" class="ghost" id="fotoEsporta">Esporta foto</button>
@@ -566,6 +568,7 @@ dialog.dlg-foto { width: min(560px, calc(100% - 16px)); max-height: calc(100% - 
       <input type="text" id="nuovoConto" maxlength="30" placeholder="Nome del nuovo conto" aria-label="Nome del nuovo conto" autocomplete="off">
       <button type="button" class="ghost" id="addConto">Aggiungi</button>
     </div>
+    <label class="spunta" for="nuovoContoFoto"><input type="checkbox" id="nuovoContoFoto"><span>Salva la foto degli scontrini in questo conto</span></label>
     <span class="form-msg" id="contiMsg" role="status"></span>
     <div class="dlg-actions"><button class="primary" value="ok">Fatto</button></div>
   </form>
@@ -672,7 +675,11 @@ dialog.dlg-foto { width: min(560px, calc(100% - 16px)); max-height: calc(100% - 
   // ---- Conti: ogni spesa appartiene a un conto; si sceglie quali conti vedere ----
   // Il conto "Generali" esiste sempre; le spese senza conto (quelle di prima) stanno lì.
   const CONTO_BASE = "generale";
-  let conti = [{ id: CONTO_BASE, nome: "Generali" }];
+  // Ogni conto ha la sua preferenza "salva la foto dello scontrino" (foto: true/false).
+  // I conti di prima, che non l'avevano, prendono la vecchia impostazione unica.
+  const fotoDiPrima = () => { try { return localStorage.getItem("spese.salvaFoto") === "1"; } catch (e) { return false; } };
+  const leggiConto = (c, foto) => ({ id: String(c.id), nome: String(c.nome), foto: typeof c.foto === "boolean" ? c.foto : foto });
+  let conti = [{ id: CONTO_BASE, nome: "Generali", foto: fotoDiPrima() }];
   const visibili = new Set();
   try { (JSON.parse(localStorage.getItem("spese.contiVisibili") || "[]") || []).forEach(id => visibili.add(String(id))); } catch (e) {}
   if (!visibili.size) visibili.add(CONTO_BASE);
@@ -1152,6 +1159,7 @@ dialog.dlg-foto { width: min(560px, calc(100% - 16px)); max-height: calc(100% - 
   // Conto aperto con la matita (uno alla volta) e passo dell'eliminazione
   let contoAperto = null, eliminando = false;
   const PENCIL = '<svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M4 20h4L19 9a2.1 2.1 0 0 0-3-3L5 17z M14.5 7.5l3 3" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+  const CAMERA = '<svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M4 8h3l2-2.5h6L17 8h3v11H4z" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linejoin="round"/><circle cx="12" cy="13" r="3.2" fill="none" stroke="currentColor" stroke-width="1.9"/></svg>';
   const el = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; };
   const btn = (cls, text, fn) => { const b = el("button", cls, text); b.type = "button"; b.addEventListener("click", fn); return b; };
   const spese = (n) => n === 1 ? "1 spesa" : `${n} spese`;
@@ -1174,7 +1182,9 @@ dialog.dlg-foto { width: min(560px, calc(100% - 16px)); max-height: calc(100% - 
         if (!editingId) $("f-conto").value = contoPredefinito();
         render(); renderContiList();
       });
-      lab.append(cb, el("span", "nome", c.nome), el("small", null, spese(k)));
+      lab.append(cb, el("span", "nome", c.nome));
+      if (c.foto) { const cam = el("span", "cam"); cam.innerHTML = CAMERA; cam.title = "Salva la foto degli scontrini"; cam.setAttribute("aria-label", "salva la foto degli scontrini"); lab.append(cam); }
+      lab.append(el("small", null, spese(k)));
       const mat = btn("matita", null, () => { contoAperto = c.id; eliminando = false; contiMsg(""); renderContiList(); const i = ul.querySelector(".conto-edit input"); if (i) { i.focus(); i.select(); } });
       mat.innerHTML = PENCIL; mat.setAttribute("aria-label", `Modifica il conto ${c.nome}`); mat.title = "Modifica o elimina";
       li.append(lab, mat); return li;
@@ -1188,14 +1198,17 @@ dialog.dlg-foto { width: min(560px, calc(100% - 16px)); max-height: calc(100% - 
     if (!eliminando) {
       const riga = el("div", "nuovo-conto");
       const inp = el("input"); inp.type = "text"; inp.maxLength = 30; inp.value = c.nome; inp.setAttribute("aria-label", "Nome del conto"); inp.autocomplete = "off";
-      const salva = () => rinominaConto(c, inp.value);
+      const spunta = el("label", "spunta"); const cf = el("input"); cf.type = "checkbox"; cf.checked = !!c.foto;
+      spunta.append(cf, el("span", null, "Salva la foto degli scontrini in questo conto"));
+      const salva = () => aggiornaConto(c, inp.value, cf.checked);
       inp.addEventListener("keydown", (e) => { if (e.key === "Enter") { e.preventDefault(); salva(); } else if (e.key === "Escape") { e.preventDefault(); chiudi(); } });
       riga.append(inp, btn("primary", "Salva", salva));
+      box.append(riga, spunta);
       const azioni = el("div", "edit-azioni");
       const del = btn("link danger", "Elimina conto", () => { eliminando = true; contiMsg(""); renderContiList(); });
       if (conti.length === 1) { del.disabled = true; del.title = "È l'unico conto"; }
       azioni.append(del, btn("link", "Annulla", chiudi));
-      box.append(riga, azioni);
+      box.append(azioni);
       if (conti.length === 1) box.append(el("small", "hint", "È l'unico conto: non si può eliminare."));
       return box;
     }
@@ -1221,15 +1234,19 @@ dialog.dlg-foto { width: min(560px, calc(100% - 16px)); max-height: calc(100% - 
     try { await persist(); emit(); return true; }
     catch (e) { annulla(); contiMsg("Salvataggio non riuscito. Riprova.", true); render(); renderContiList(); return false; }
   }
-  async function rinominaConto(c, valore) {
+  // Matita → Salva: nuovo nome e preferenza "salva la foto"
+  async function aggiornaConto(c, valore, foto) {
     const nome = String(valore).trim().replace(/\s+/g, " ").slice(0, 30);
     if (!nome) { contiMsg("Scrivi il nome del conto.", true); return; }
     if (conti.some(x => x.id !== c.id && keyOf(x.nome) === keyOf(nome))) { contiMsg(`Il conto «${nome}» esiste già.`, true); return; }
-    const vecchio = c.nome;
-    c.nome = nome;
-    if (!(await salvaTutto(() => { c.nome = vecchio; }))) return;
+    const vecchio = { nome: c.nome, foto: c.foto };
+    c.nome = nome; c.foto = !!foto;
+    if (!(await salvaTutto(() => { c.nome = vecchio.nome; c.foto = vecchio.foto; }))) return;
     contoAperto = null;
-    contiMsg(nome === vecchio ? "" : `Conto rinominato in «${nome}».`);
+    const msg = [];
+    if (nome !== vecchio.nome) msg.push(`Conto rinominato in «${nome}».`);
+    if (c.foto !== vecchio.foto) msg.push(c.foto ? `In «${nome}» la foto dello scontrino si salva.` : `In «${nome}» la foto dello scontrino non si salva.`);
+    contiMsg(msg.join(" "));
     render(); renderContiList();
   }
   // dest: id del conto in cui spostare le spese; false: elimina anche le spese; null: il conto è vuoto
@@ -1258,15 +1275,15 @@ dialog.dlg-foto { width: min(560px, calc(100% - 16px)); max-height: calc(100% - 
     const nome = $("nuovoConto").value.trim().replace(/\s+/g, " ").slice(0, 30);
     if (!nome) { contiMsg("Scrivi il nome del conto.", true); $("nuovoConto").focus(); return; }
     if (conti.some(c => keyOf(c.nome) === keyOf(nome))) { contiMsg(`Il conto «${nome}» esiste già.`, true); $("nuovoConto").focus(); return; }
-    const c = { id: newId(), nome };
+    const c = { id: newId(), nome, foto: $("nuovoContoFoto").checked };
     conti.push(c); visibili.add(c.id); saveVisibili();
     try { await persist(); } catch (e) { conti = conti.filter(x => x.id !== c.id); visibili.delete(c.id); saveVisibili(); contiMsg("Salvataggio non riuscito. Riprova.", true); return; }
-    $("nuovoConto").value = "";
+    $("nuovoConto").value = ""; $("nuovoContoFoto").checked = false;
     contiMsg(`Conto «${nome}» aggiunto.`);
     render(); renderContiList();
   }
   $("contiBtn").addEventListener("click", () => {
-    contiMsg(""); $("nuovoConto").value = ""; contoAperto = null; eliminando = false;
+    contiMsg(""); $("nuovoConto").value = ""; $("nuovoContoFoto").checked = false; contoAperto = null; eliminando = false;
     renderContiList();
     contiDlg.showModal();
   });
@@ -1275,20 +1292,19 @@ dialog.dlg-foto { width: min(560px, calc(100% - 16px)); max-height: calc(100% - 
   // tocco fuori dalla finestra: chiude
   [contiDlg, $("scanDlg"), $("impDlg"), $("expDlg"), $("fotoDlg"), $("gfDlg")].forEach(d => d.addEventListener("click", (e) => { if (e.target === d) d.close(); }));
 
-  // ---- Preferenza: salvare la foto dello scontrino (come parte la casella) ----
-  const prefFoto = () => { try { return localStorage.getItem("spese.salvaFoto") === "1"; } catch (e) { return false; } };
-  function setPrefFoto(v) { try { localStorage.setItem("spese.salvaFoto", v ? "1" : "0"); } catch (e) {} }
-
   // ---- Finestra prima della foto: (con più conti) la scelta del conto in un riquadro, sotto la casella "salva la foto" ----
   // Toccare un conto lo seleziona soltanto: si conferma con "Fatto", così un tocco sbagliato non salva nulla.
+  // La casella segue la preferenza del conto selezionato finché non la si tocca a mano; da lì resta com'è.
   // Con un solo conto c'è solo la casella e "Fatto". Risponde { conto, foto } oppure null se annullato
   const CONTI_VISIBILI = 5;
   function chiediConto() {
     return new Promise((resolve) => {
-      const d = $("scanDlg"), box = $("scanConti"), nota = $("scanContiNota");
-      let scelto = null;
-      $("scanFoto").checked = prefFoto();
+      const d = $("scanDlg"), box = $("scanConti"), nota = $("scanContiNota"), casella = $("scanFoto");
+      let scelto = null, toccata = false;
       const piu = multiConti();
+      const fotoDi = (id) => !!(conti.find(c => c.id === id) || {}).foto;
+      casella.onchange = () => { toccata = true; };
+      box.onchange = (e) => { if (!toccata && e.target.name === "scanConto") casella.checked = fotoDi(e.target.value); };
       $("scanDlgTitle").hidden = box.hidden = !piu;
       const ordine = [...conti].sort((a, b) => (visibili.has(b.id) - visibili.has(a.id)));
       const pred = contoPredefinito();
@@ -1300,6 +1316,7 @@ dialog.dlg-foto { width: min(560px, calc(100% - 16px)); max-height: calc(100% - 
         lab.append(r, n); li.append(lab); return li;
       }));
       if (piu && !box.querySelector("input:checked")) box.querySelector("input").checked = true;
+      casella.checked = fotoDi(piu ? box.querySelector("input:checked").value : baseId());
       const troppi = piu && ordine.length > CONTI_VISIBILI;
       nota.hidden = !troppi;
       nota.textContent = troppi ? `${ordine.length} conti: scorri per vederli tutti.` : "";
@@ -1787,7 +1804,7 @@ dialog.dlg-foto { width: min(560px, calc(100% - 16px)); max-height: calc(100% - 
         const id = String(c.id), nome = String(c.nome).trim().slice(0, 30);
         const uguale = conti.find(x => x.id === id) || conti.find(x => keyOf(x.nome) === keyOf(nome));
         if (uguale) { mappa.set(id, uguale.id); return; }
-        conti.push({ id, nome }); visibili.add(id); mappa.set(id, id); nuoviConti++;
+        conti.push(leggiConto({ id, nome, foto: c.foto }, false)); visibili.add(id); mappa.set(id, id); nuoviConti++;
       });
       if (nuoviConti) saveVisibili();
       const have = new Set(store.map(r => r.id));
@@ -1817,7 +1834,9 @@ dialog.dlg-foto { width: min(560px, calc(100% - 16px)); max-height: calc(100% - 
     } else {
       store = Array.isArray(saved.spese) ? saved.spese : [];
       const salvati = Array.isArray(saved.conti) ? saved.conti.filter(c => c && c.id && String(c.nome || "").trim()) : [];
-      if (salvati.length) conti = salvati.map(c => ({ id: String(c.id), nome: String(c.nome) }));
+      if (salvati.length) conti = salvati.map(c => leggiConto(c, fotoDiPrima()));
+      // conti di prima senza preferenza: la si salva subito (dalla vecchia impostazione)
+      if (!salvati.length || salvati.some(c => typeof c.foto !== "boolean")) { try { await persist(); } catch (e) {} }
     }
     pulisciVisibili(); saveVisibili();
     $("f-conto").value = contoPredefinito();
@@ -2265,13 +2284,11 @@ dialog.dlg-foto { width: min(560px, calc(100% - 16px)); max-height: calc(100% - 
     box.replaceChildren(...[].concat(nodi || []));
   }
   $("impBtn").addEventListener("click", () => {
-    $("prefFoto").checked = prefFoto();
     backupMsg(""); fotoMsg(""); aggEsito(null);
     aggiornaSpazioFoto();
     impDlg.showModal();
   });
   $("chiudiImp").addEventListener("click", () => impDlg.close());
-  $("prefFoto").addEventListener("change", (e) => setPrefFoto(e.target.checked));
 
   // Ricerca manuale: prima l'app (APK), poi l'interfaccia
   $("cercaAgg").addEventListener("click", async () => {
