@@ -286,11 +286,17 @@ dialog.dlg::backdrop { background: rgba(10, 20, 25, .45); }
 .danger-btn { border: 0; background: var(--danger); color: var(--paper); border-radius: 8px; padding: 9px 14px; font-weight: 600; }
 .nuovo-conto input { flex: 1; }
 .dlg-actions { display: flex; justify-content: flex-end; gap: 8px; }
-.scelta-conti { display: flex; flex-direction: column; gap: 8px; }
-.scelta-conti button { border: 1px solid var(--line); background: var(--bg); border-radius: 8px; padding: 12px 14px; text-align: left; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.scelta-conti button:hover, .scelta-conti button:focus-visible { border-color: var(--accent); background: var(--accent-soft); }
+/* Scelta del conto per lo scontrino: riquadro a sé, al massimo 5 conti visibili, poi si scorre */
+.scelta-conti { position: relative; list-style: none; margin: 0; padding: 0; border: 1px solid var(--line); border-radius: 10px; overflow-y: auto; overscroll-behavior: contain; -webkit-overflow-scrolling: touch; }
+.scelta-conti li { border-top: 1px solid var(--line); }
+.scelta-conti li:first-child { border-top: 0; }
+.scelta-conti label { display: flex; align-items: center; gap: 12px; padding: 12px 14px; cursor: pointer; user-select: none; }
+.scelta-conti input { width: 20px; height: 20px; margin: 0; accent-color: var(--accent); flex: none; }
+.scelta-conti .nome { flex: 1; min-width: 0; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.scelta-conti li:has(input:checked) { background: var(--accent-soft); }
+.scelta-nota { margin: -6px 0 0; color: var(--muted); font-size: .8rem; }
 
-/* Casella "salva la foto" in cima alla scelta del conto */
+/* Casella "salva la foto" sotto la scelta del conto */
 .foto-box { display: flex; align-items: center; gap: 12px; padding: 11px 12px; border: 1px solid var(--line); border-radius: 10px; background: var(--bg); cursor: pointer; user-select: none; }
 .foto-box input { width: 20px; height: 20px; margin: 0; accent-color: var(--accent); flex: none; }
 .foto-box span { font-weight: 600; }
@@ -567,13 +573,14 @@ dialog.dlg-foto { width: min(560px, calc(100% - 16px)); max-height: calc(100% - 
 
 <dialog class="dlg" id="scanDlg" aria-label="Scontrino">
   <div class="dlg-body">
+    <h2 id="scanDlgTitle">In che conto metto lo scontrino?</h2>
+    <ul class="scelta-conti" id="scanConti" role="radiogroup" aria-labelledby="scanDlgTitle"></ul>
+    <p class="scelta-nota" id="scanContiNota" hidden></p>
     <label class="foto-box" for="scanFoto">
       <input type="checkbox" id="scanFoto">
       <span>Salva la foto dello scontrino</span>
     </label>
-    <h2 id="scanDlgTitle">In che conto metto lo scontrino?</h2>
-    <div class="scelta-conti" id="scanConti"></div>
-    <div class="dlg-actions"><button type="button" class="ghost" id="scanDlgAnnulla">Annulla</button><button type="button" class="primary" id="scanContinua" hidden>Continua</button></div>
+    <div class="dlg-actions"><button type="button" class="ghost" id="scanDlgAnnulla">Annulla</button><button type="button" class="primary" id="scanFatto">Fatto</button></div>
   </div>
 </dialog>
 
@@ -1272,28 +1279,47 @@ dialog.dlg-foto { width: min(560px, calc(100% - 16px)); max-height: calc(100% - 
   const prefFoto = () => { try { return localStorage.getItem("spese.salvaFoto") === "1"; } catch (e) { return false; } };
   function setPrefFoto(v) { try { localStorage.setItem("spese.salvaFoto", v ? "1" : "0"); } catch (e) {} }
 
-  // ---- Finestra prima della foto: casella "salva la foto" in cima, poi (con più conti) la scelta del conto ----
-  // Con un solo conto c'è solo la casella e "Continua". Risponde { conto, foto } oppure null se annullato
+  // ---- Finestra prima della foto: (con più conti) la scelta del conto in un riquadro, sotto la casella "salva la foto" ----
+  // Toccare un conto lo seleziona soltanto: si conferma con "Fatto", così un tocco sbagliato non salva nulla.
+  // Con un solo conto c'è solo la casella e "Fatto". Risponde { conto, foto } oppure null se annullato
+  const CONTI_VISIBILI = 5;
   function chiediConto() {
     return new Promise((resolve) => {
-      const d = $("scanDlg"), box = $("scanConti");
+      const d = $("scanDlg"), box = $("scanConti"), nota = $("scanContiNota");
       let scelto = null;
       $("scanFoto").checked = prefFoto();
       const piu = multiConti();
       $("scanDlgTitle").hidden = box.hidden = !piu;
-      $("scanContinua").hidden = piu;
-      $("scanContinua").onclick = () => { scelto = baseId(); d.close(); };
       const ordine = [...conti].sort((a, b) => (visibili.has(b.id) - visibili.has(a.id)));
+      const pred = contoPredefinito();
       box.replaceChildren(...ordine.map(c => {
-        const b = document.createElement("button"); b.type = "button"; b.textContent = c.nome;
-        b.addEventListener("click", () => { scelto = c.id; d.close(); });
-        return b;
+        const li = document.createElement("li"), lab = document.createElement("label");
+        const r = document.createElement("input"); r.type = "radio"; r.name = "scanConto"; r.value = c.id;
+        r.checked = c.id === pred;
+        const n = document.createElement("span"); n.className = "nome"; n.textContent = c.nome;
+        lab.append(r, n); li.append(lab); return li;
       }));
+      if (piu && !box.querySelector("input:checked")) box.querySelector("input").checked = true;
+      const troppi = piu && ordine.length > CONTI_VISIBILI;
+      nota.hidden = !troppi;
+      nota.textContent = troppi ? `${ordine.length} conti: scorri per vederli tutti.` : "";
+      $("scanFatto").onclick = () => {
+        scelto = piu ? (box.querySelector("input:checked") || {}).value || null : baseId();
+        d.close();
+      };
       $("scanDlgAnnulla").onclick = () => d.close();
       d.addEventListener("close", () => resolve(scelto ? { conto: scelto, foto: $("scanFoto").checked } : null), { once: true });
+      box.style.maxHeight = "";
+      box.scrollTop = 0;
       d.showModal();
-      const pref = piu ? box.querySelectorAll("button")[ordine.findIndex(c => c.id === contoPredefinito())] : $("scanContinua");
-      if (pref) pref.focus();
+      if (troppi) {
+        // altezza del riquadro = esattamente i primi 5 conti; il conto selezionato viene portato in vista
+        const righe = box.children;
+        box.style.maxHeight = (righe[CONTI_VISIBILI].offsetTop + 2) + "px";
+        const sel = box.querySelector("input:checked");
+        if (sel) { const li = sel.closest("li"); box.scrollTop = Math.max(0, li.offsetTop + li.offsetHeight - box.clientHeight); }
+      }
+      $("scanFatto").focus();
     });
   }
 
