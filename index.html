@@ -31,23 +31,18 @@
   --f-num: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, monospace;
 }
 @media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) {
+  :root {
     --bg: #0f1619; --paper: #172126; --ink: #e4ecef; --muted: #93a5ad; --line: #2a3a41;
     --accent: #6fb8cf; --accent-ink: #0c1b21; --accent-soft: #1d3540;
     --gift: #f0b45a; --gift-soft: #3a2a12; --danger: #f2877f; color-scheme: dark;
   }
 }
-:root[data-theme="dark"] {
-  --bg: #0f1619; --paper: #172126; --ink: #e4ecef; --muted: #93a5ad; --line: #2a3a41;
-  --accent: #6fb8cf; --accent-ink: #0c1b21; --accent-soft: #1d3540;
-  --gift: #f0b45a; --gift-soft: #3a2a12; --danger: #f2877f; color-scheme: dark;
-}
 * { box-sizing: border-box; }
 html { -webkit-text-size-adjust: 100%; }
 [hidden] { display: none !important; }
 img { max-width: 100%; }
-body { margin: 0; -webkit-tap-highlight-color: transparent; }
 body {
+  margin: 0; -webkit-tap-highlight-color: transparent;
   background: var(--bg); color: var(--ink); font-family: var(--f-body); font-size: 15px; line-height: 1.45;
   padding-left: max(16px, env(safe-area-inset-left, 0px));
   padding-right: max(16px, env(safe-area-inset-right, 0px));
@@ -60,7 +55,7 @@ button { font: inherit; color: inherit; cursor: pointer; }
 
 /* Intestazione: conti a sinistra, impostazioni in alto a destra; su telefono i periodi vanno sotto, a tutta larghezza */
 header.top { display: grid; grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: "titolo imp" "seg seg"; align-items: center; gap: 10px 12px; }
-header.top h1 { grid-area: titolo; }
+header.top h1 { grid-area: titolo; min-width: 0; }
 header.top .seg { grid-area: seg; display: flex; }
 header.top .seg button { flex: 1; }
 header.top .imp-btn { grid-area: imp; }
@@ -139,14 +134,11 @@ h1 { font-family: var(--f-display); font-weight: 700; font-size: 1.6rem; letter-
 .quick-list button:hover { border-color: var(--accent); }
 .quick-list b { font-weight: 600; font-size: .86rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 11em; }
 .quick-list small { font-size: .74rem; color: var(--muted); }
-.version { font-size: .82rem; color: var(--muted); }
-.version a { color: var(--accent); font-weight: 600; }
 .bar-row .n { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .bar-track { height: 8px; background: var(--accent-soft); border-radius: 4px; overflow: hidden; display: flex; gap: 2px; }
 .bar-fill { height: 100%; flex: none; background: var(--accent); }
 .bar-fill.g { background: var(--gift); }
 .bar-fill:last-child { border-radius: 0 4px 4px 0; }
-.bar-row[aria-pressed="false"] .bar-fill.g { background: var(--line); }
 .bar-row .v { font-family: var(--f-num); font-variant-numeric: tabular-nums; font-size: .82rem; text-align: right; line-height: 1.25; }
 .bar-row .v small { display: block; font-size: .72rem; color: var(--gift); }
 .bar-row[aria-pressed="false"] .v small { color: var(--muted); }
@@ -157,10 +149,10 @@ form.entry h2 { grid-column: 1 / -1; margin: 0; font-family: var(--f-display); f
 .field { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
 .field.full { grid-column: 1 / -1; }
 .field label { font-size: .72rem; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); font-weight: 600; }
-input[type=text], input[type=search], input[type=date], input[inputmode] {
+input[type=text], input[type=search], input[type=date], input[inputmode], select {
   font: inherit; color: var(--ink); background: var(--bg); border: 1px solid var(--line); border-radius: 8px; padding: 9px 10px; width: 100%; min-width: 0;
 }
-input:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+input:focus, select:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
 .price-wrap { position: relative; }
 .price-wrap span { position: absolute; left: 10px; top: 50%; transform: translateY(-50%); color: var(--muted); font-family: var(--f-num); }
 .price-wrap input { padding-left: 26px; font-family: var(--f-num); }
@@ -186,7 +178,7 @@ input:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px 
 .upd { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 12px; background: var(--accent-soft); border: 1px solid var(--accent); border-radius: 10px; padding: 10px 12px; font-size: .9rem; }
 .upd span { font-weight: 600; flex: 1; min-width: 10em; }
 .upd small { flex-basis: 100%; color: var(--muted); font-size: .8rem; }
-.upd .primary { padding: 7px 14px; }
+.upd .primary, .agg-esito .primary { padding: 7px 14px; }
 
 /* Elenco */
 .list { display: flex; flex-direction: column; gap: 14px; }
@@ -239,23 +231,17 @@ dialog.dlg-spesa { width: min(560px, calc(100% - 24px)); max-height: calc(100% -
 .row.fresh { background: var(--gift-soft); }
 .when { font-size: .74rem; color: var(--muted); font-family: var(--f-num); align-self: center; }
 
-.backup { border-top: 1px dashed var(--line); padding-top: 16px; display: flex; flex-direction: column; gap: 8px; }
-.backup h2 { margin: 0; font-family: var(--f-display); font-weight: 600; font-size: 1rem; }
-.backup p { margin: 0; color: var(--muted); font-size: .88rem; }
 .backup-actions { display: flex; flex-wrap: wrap; gap: 8px; }
 .backup-actions .ghost { font-size: .88rem; cursor: pointer; color: var(--ink); }
 .backup-actions label:has(+ input:focus-visible) { outline: 2px solid var(--accent); outline-offset: 2px; }
 
 /* Conti: pulsante nel titolo, finestre di scelta, etichetta sopra le voci */
-header.top h1 { min-width: 0; flex: 0 1 auto; }
 .conti-btn { border: 0; background: none; padding: 2px 6px 2px 0; margin: 0; display: inline-flex; align-items: center; gap: 6px; max-width: 100%;
   font: inherit; font-family: var(--f-display); font-weight: 700; font-size: 1.6rem; letter-spacing: -0.01em; color: var(--ink); border-radius: 8px; text-align: left; }
 .conti-btn .nome { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
 .conti-btn svg { flex: none; color: var(--muted); }
 .conti-btn:hover svg { color: var(--accent); }
 .row .conto-lab { font-size: .7rem; text-transform: uppercase; letter-spacing: .07em; color: var(--muted); font-weight: 600; margin-bottom: 1px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-select { font: inherit; color: var(--ink); background: var(--bg); border: 1px solid var(--line); border-radius: 8px; padding: 9px 10px; width: 100%; min-width: 0; }
-select:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
 dialog.dlg { border: 1px solid var(--line); border-radius: 12px; padding: 0; background: var(--paper); color: var(--ink);
   width: min(420px, calc(100% - 32px)); max-height: calc(100% - 32px); overflow: auto; box-shadow: 0 12px 40px rgba(0,0,0,.25); }
 dialog.dlg::backdrop { background: rgba(10, 20, 25, .45); }
@@ -263,14 +249,14 @@ dialog.dlg::backdrop { background: rgba(10, 20, 25, .45); }
 .dlg-body h2 { margin: 0; font-family: var(--f-display); font-weight: 600; font-size: 1.1rem; }
 .dlg-sub { margin: -6px 0 0; color: var(--muted); font-size: .86rem; }
 .conti-list { list-style: none; margin: 0; padding: 0; border: 1px solid var(--line); border-radius: 10px; }
-.conti-list li { border-top: 1px solid var(--line); }
-.conti-list li:first-child { border-top: 0; }
+.conti-list li, .scelta-conti li { border-top: 1px solid var(--line); }
+.conti-list li:first-child, .scelta-conti li:first-child { border-top: 0; }
+.conti-list li { display: flex; align-items: center; }
 .conti-list label { display: flex; align-items: center; gap: 12px; padding: 11px 12px; cursor: pointer; user-select: none; }
-.conti-list input[type=checkbox] { width: 20px; height: 20px; margin: 0; accent-color: var(--accent); flex: none; }
-.conti-list .nome { flex: 1; min-width: 0; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.conti-list input[type=checkbox], .scelta-conti input, .foto-box input, .spunta input { width: 20px; height: 20px; margin: 0; accent-color: var(--accent); flex: none; }
+.conti-list .nome, .scelta-conti .nome { flex: 1; min-width: 0; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .conti-list small { color: var(--muted); font-size: .8rem; flex: none; }
 .nuovo-conto { display: flex; gap: 8px; }
-.conti-list li { display: flex; align-items: center; }
 .conti-list li > label { flex: 1; min-width: 0; padding-right: 4px; }
 .matita { flex: none; border: 0; background: none; color: var(--muted); width: 40px; height: 40px; margin-right: 4px; border-radius: 8px; display: grid; place-items: center; }
 .matita:hover { color: var(--accent); background: var(--bg); }
@@ -288,22 +274,16 @@ dialog.dlg::backdrop { background: rgba(10, 20, 25, .45); }
 .dlg-actions { display: flex; justify-content: flex-end; gap: 8px; }
 /* Scelta del conto per lo scontrino: riquadro a sé, al massimo 5 conti visibili, poi si scorre */
 .scelta-conti { position: relative; list-style: none; margin: 0; padding: 0; border: 1px solid var(--line); border-radius: 10px; overflow-y: auto; overscroll-behavior: contain; -webkit-overflow-scrolling: touch; }
-.scelta-conti li { border-top: 1px solid var(--line); }
-.scelta-conti li:first-child { border-top: 0; }
 .scelta-conti label { display: flex; align-items: center; gap: 12px; padding: 12px 14px; cursor: pointer; user-select: none; }
-.scelta-conti input { width: 20px; height: 20px; margin: 0; accent-color: var(--accent); flex: none; }
-.scelta-conti .nome { flex: 1; min-width: 0; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .scelta-conti li:has(input:checked) { background: var(--accent-soft); }
 .scelta-nota { margin: -6px 0 0; color: var(--muted); font-size: .8rem; }
 
 /* Casella "salva la foto" sotto la scelta del conto */
 .foto-box { display: flex; align-items: center; gap: 12px; padding: 11px 12px; border: 1px solid var(--line); border-radius: 10px; background: var(--bg); cursor: pointer; user-select: none; }
-.foto-box input { width: 20px; height: 20px; margin: 0; accent-color: var(--accent); flex: none; }
 .foto-box span { font-weight: 600; }
 .foto-box:has(input:checked) { border-color: var(--accent); background: var(--accent-soft); }
 /* Preferenza "salva la foto" di ogni conto (nuovo conto e matita) */
 .spunta { display: flex; align-items: center; gap: 10px; font-size: .9rem; cursor: pointer; user-select: none; }
-.spunta input { width: 20px; height: 20px; margin: 0; accent-color: var(--accent); flex: none; }
 .conti-list .conto-edit .spunta { padding: 0; gap: 10px; }
 .conti-list .cam { flex: none; color: var(--accent); display: grid; place-items: center; }
 
@@ -314,21 +294,11 @@ dialog.dlg-imp { width: min(460px, calc(100% - 24px)); }
 .imp-sez:first-of-type { border-top: 0; padding-top: 0; }
 .imp-sez h3 { margin: 0; font-size: .72rem; text-transform: uppercase; letter-spacing: .09em; color: var(--muted); font-weight: 600; }
 .imp-sez p { margin: 0; color: var(--muted); font-size: .86rem; }
-.interruttore { display: flex; align-items: center; justify-content: space-between; gap: 14px; cursor: pointer; user-select: none; }
-.interruttore .testo { display: flex; flex-direction: column; min-width: 0; }
-.interruttore .testo b { font-weight: 600; }
-.interruttore .testo small { color: var(--muted); font-size: .8rem; }
-.interruttore input { appearance: none; -webkit-appearance: none; flex: none; position: relative; width: 46px; height: 28px; margin: 0; border-radius: 99px; background: var(--line); cursor: pointer; transition: background .15s ease; }
-.interruttore input::after { content: ""; position: absolute; top: 3px; left: 3px; width: 22px; height: 22px; border-radius: 50%; background: var(--paper); box-shadow: 0 1px 3px rgba(0,0,0,.25); transition: transform .15s ease; }
-.interruttore input:checked { background: var(--accent); }
-.interruttore input:checked::after { transform: translateX(18px); }
-.interruttore input:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 .ver-riga { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 12px; }
 .ver-riga .version { font-family: var(--f-num); font-size: .86rem; color: var(--ink); }
 .agg-esito { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; font-size: .86rem; }
 .agg-esito:empty { display: none; }
 .agg-esito.err { color: var(--danger); }
-.agg-esito .primary { padding: 7px 14px; }
 
 /* Foto dello scontrino */
 .chip.foto { display: inline-flex; align-items: center; gap: 4px; background: var(--bg); color: var(--ink); border: 1px solid var(--line); }
@@ -343,7 +313,6 @@ dialog.dlg-foto { width: min(560px, calc(100% - 16px)); max-height: calc(100% - 
 .gf-testa .link { font-size: .82rem; }
 #gfOk.danger-btn { padding: 10px 16px; }
 #gfDopoBox span { font-weight: 500; font-size: .9rem; }
-@media (prefers-reduced-motion: reduce) { .interruttore input, .interruttore input::after { transition: none; } }
 
 .empty { background: var(--paper); border: 1px dashed var(--line); border-radius: 10px; padding: 24px 18px; text-align: center; color: var(--muted); }
 .empty strong { display: block; color: var(--ink); font-family: var(--f-display); font-size: 1.05rem; margin-bottom: 4px; }
@@ -352,7 +321,6 @@ dialog.dlg-foto { width: min(560px, calc(100% - 16px)); max-height: calc(100% - 
 @media (max-width: 420px) {
   form.entry { grid-template-columns: 1fr; }
   .total { font-size: 2rem; }
-  .month span { min-width: 7.5em; }
 }
 @media (prefers-reduced-motion: no-preference) {
   .bar-fill { transition: width .35s ease; }
@@ -616,6 +584,43 @@ dialog.dlg-foto { width: min(560px, calc(100% - 16px)); max-height: calc(100% - 
 <script>
 (() => {
   const $ = (id) => document.getElementById(id);
+  // Crea un elemento con le sue proprietà e i suoi figli (testi o elementi; i null si saltano):
+  //   el("span", "nome", c.nome)                        classe e testo
+  //   el("input", { type: "checkbox", checked: true })  proprietà, nell'ordine in cui sono scritte
+  //   el("li", { "aria-selected": "false" }, ...)       quello che non è una proprietà diventa un attributo
+  const el = (tag, props, ...figli) => {
+    const e = document.createElement(tag);
+    if (typeof props === "string") props = { className: props };
+    for (const [k, v] of Object.entries(props || {})) {
+      if (v == null || (k === "className" && !v)) continue;
+      if (k in e) e[k] = v; else e.setAttribute(k, v);
+    }
+    e.append(...figli.filter(f => f != null));
+    return e;
+  };
+  // Pulsante (type="button") che al tocco chiama fn; contenuto: un testo, un elemento o una lista
+  const btn = (props, contenuto, fn) => {
+    const b = el("button", props, ...[].concat(contenuto));
+    b.type = "button"; b.addEventListener("click", fn);
+    return b;
+  };
+  // Messaggi sotto i pulsanti: testo (o elementi) e classe "err" se è un errore
+  const messaggio = (id, classe) => (t, err) => {
+    const m = $(id);
+    m.replaceChildren(...[].concat(t || []));
+    m.className = classe + (err ? " err" : "");
+  };
+  const setMsg = messaggio("msg", "form-msg");
+  const contiMsg = messaggio("contiMsg", "form-msg");
+  const backupMsg = messaggio("backupMsg", "form-msg");
+  const fotoMsg = messaggio("fotoMsg", "form-msg");
+  const exMsg = messaggio("exMsg", "ex-msg");
+  const aggEsito = messaggio("aggEsito", "agg-esito");
+  // localStorage: chi legge o scrive non deve mai fallire (memoria piena, accesso negato)
+  const lsGet = (k) => { try { return localStorage.getItem(k); } catch (e) { return null; } };
+  const lsSet = (k, v) => { try { if (v == null) localStorage.removeItem(k); else localStorage.setItem(k, v); } catch (e) {} };
+  const lsJson = (k) => { try { return JSON.parse(lsGet(k) || "null"); } catch (e) { return null; } };
+  const lsLista = (k) => { const v = lsJson(k); return Array.isArray(v) ? v : []; };
   const DEFAULT_TIPI = ["Alimentari", "Ristorante", "Bar", "Trasporti", "Carburante", "Casa", "Abbigliamento", "Svago", "Farmacia", "Regali"];
   const fmt = new Intl.NumberFormat("it-IT", { style: "currency", currency: "EUR" });
   const euro = (cents) => fmt.format((cents || 0) / 100);
@@ -632,7 +637,8 @@ dialog.dlg-foto { width: min(560px, calc(100% - 16px)); max-height: calc(100% - 
   const monthShortFmt = new Intl.DateTimeFormat("it-IT", { month: "narrow" });
   const wdFmt = new Intl.DateTimeFormat("it-IT", { weekday: "narrow" });
   let view = "month";
-  try { const v = localStorage.getItem("spese.view"); if (["week", "month", "year"].includes(v)) view = v; } catch (e) {}
+  const vistaSalvata = lsGet("spese.view");
+  if (["week", "month", "year"].includes(vistaSalvata)) view = vistaSalvata;
   let anchor = new Date(); anchor.setHours(0, 0, 0, 0);
 
   // Settimana da lunedì a domenica
@@ -661,7 +667,7 @@ dialog.dlg-foto { width: min(560px, calc(100% - 16px)); max-height: calc(100% - 
   }
   function setView(v) {
     view = v;
-    try { localStorage.setItem("spese.view", v); } catch (e) {}
+    lsSet("spese.view", v);
     render();
   }
   let rows = [];          // tutte le spese {id, tipologia, esercente, prezzoCent, offerto, data}
@@ -677,13 +683,14 @@ dialog.dlg-foto { width: min(560px, calc(100% - 16px)); max-height: calc(100% - 
   const CONTO_BASE = "generale";
   // Ogni conto ha la sua preferenza "salva la foto dello scontrino" (foto: true/false).
   // I conti di prima, che non l'avevano, prendono la vecchia impostazione unica.
-  const fotoDiPrima = () => { try { return localStorage.getItem("spese.salvaFoto") === "1"; } catch (e) { return false; } };
+  const fotoDiPrima = () => lsGet("spese.salvaFoto") === "1";
   const leggiConto = (c, foto) => ({ id: String(c.id), nome: String(c.nome), foto: typeof c.foto === "boolean" ? c.foto : foto });
   let conti = [{ id: CONTO_BASE, nome: "Generali", foto: fotoDiPrima() }];
   const visibili = new Set();
-  try { (JSON.parse(localStorage.getItem("spese.contiVisibili") || "[]") || []).forEach(id => visibili.add(String(id))); } catch (e) {}
+  // un valore corrotto (non trasformabile in testo) non deve bloccare l'avvio
+  try { lsLista("spese.contiVisibili").forEach(id => visibili.add(String(id))); } catch (e) {}
   if (!visibili.size) visibili.add(CONTO_BASE);
-  function saveVisibili() { try { localStorage.setItem("spese.contiVisibili", JSON.stringify([...visibili])); } catch (e) {} }
+  const saveVisibili = () => lsSet("spese.contiVisibili", JSON.stringify([...visibili]));
   // Conto di riserva per le spese senza conto (quelle di prima): Generali, o il primo rimasto
   const baseId = () => conti.some(c => c.id === CONTO_BASE) ? CONTO_BASE : conti[0].id;
   const contoOf = (r) => (r && r.conto && conti.some(c => c.id === r.conto)) ? r.conto : baseId();
@@ -696,7 +703,7 @@ dialog.dlg-foto { width: min(560px, calc(100% - 16px)); max-height: calc(100% - 
     if (!visibili.size) conti.forEach(c => visibili.add(c.id));
   }
   function contoPredefinito() {
-    let u = null; try { u = localStorage.getItem("spese.ultimoConto"); } catch (e) {}
+    const u = lsGet("spese.ultimoConto");
     if (u && visibili.has(u) && conti.some(c => c.id === u)) return u;
     const v = conti.find(c => visibili.has(c.id));
     return v ? v.id : baseId();
@@ -709,7 +716,7 @@ dialog.dlg-foto { width: min(560px, calc(100% - 16px)); max-height: calc(100% - 
     $("contiBtn").setAttribute("aria-label", "Conti: " + label);
     $("contoField").hidden = !multiConti();
     const sel = $("f-conto"), cur = sel.value;
-    sel.replaceChildren(...conti.map(c => { const o = document.createElement("option"); o.value = c.id; o.textContent = c.nome; return o; }));
+    sel.replaceChildren(...conti.map(c => el("option", { value: c.id }, c.nome)));
     sel.value = conti.some(c => c.id === cur) ? cur : contoPredefinito();
   }
 
@@ -737,8 +744,8 @@ dialog.dlg-foto { width: min(560px, calc(100% - 16px)); max-height: calc(100% - 
 
   // Categorie nascoste (si ricordano anche chiudendo l'app)
   const hidden = new Set();
-  try { (JSON.parse(localStorage.getItem("spese.nascoste") || "[]") || []).forEach(t => hidden.add(t === "—" ? t : keyOf(t))); } catch (e) {}
-  function saveHidden() { try { localStorage.setItem("spese.nascoste", JSON.stringify([...hidden])); } catch (e) {} }
+  try { lsLista("spese.nascoste").forEach(t => hidden.add(t === "—" ? t : keyOf(t))); } catch (e) {}
+  const saveHidden = () => lsSet("spese.nascoste", JSON.stringify([...hidden]));
   function toggleTipo(t) {
     if (hidden.has(t)) hidden.delete(t); else hidden.add(t);
     saveHidden(); render();
@@ -756,8 +763,13 @@ dialog.dlg-foto { width: min(560px, calc(100% - 16px)); max-height: calc(100% - 
   // Ricerca testuale (ignora maiuscole e accenti), su tutte le date
   const norm = (s) => String(s || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
   const matches = (r, q) => norm([r.esercente, r.nota, r.tipologia, centsToInput(r.prezzoCent || 0)].join(" ")).includes(q);
+  // La spesa è tra quelle mostrate: con una ricerca (q) su tutte le date, altrimenti nel periodo P
+  const nelFiltro = (r, P, q) => !!r.data && (q ? matches(r, q) : r.data >= P.start && r.data <= P.end);
+  // Ordine dell'elenco: dalla più recente; nello stesso giorno, dall'ultima inserita
+  const piuRecenti = (a, b) => (b.data || "").localeCompare(a.data || "") || (b.creato || 0) - (a.creato || 0);
+  const piuVecchie = (a, b) => piuRecenti(b, a);
   let showDates = false;  // data su ogni riga (vista anno o ricerca)
-  let lastShown = [], lastLabel = "";
+  let lastLabel = "";
 
   function parsePrice(s) {
     s = String(s).trim().replace(/\s|€/g, "");
@@ -768,6 +780,25 @@ dialog.dlg-foto { width: min(560px, calc(100% - 16px)); max-height: calc(100% - 
   }
   const centsToInput = (c) => (c / 100).toFixed(2).replace(".", ",");
 
+  // Somme in centesimi: spese normali (v) e offerte (g), separate
+  function somme(lista) {
+    let v = 0, g = 0;
+    lista.forEach(r => { if (r.offerto) g += r.prezzoCent || 0; else v += r.prezzoCent || 0; });
+    return { v, g };
+  }
+  // Raggruppa una lista per chiave, nell'ordine in cui le chiavi compaiono: Map chiave -> elementi
+  function raggruppa(lista, chiave) {
+    const m = new Map();
+    lista.forEach(x => { const k = chiave(x); if (!m.has(k)) m.set(k, []); m.get(k).push(x); });
+    return m;
+  }
+  // Quanti elementi per chiave: Map chiave -> numero
+  function contaPer(lista, chiave) {
+    const m = new Map();
+    lista.forEach(x => { const k = chiave(x); m.set(k, (m.get(k) || 0) + 1); });
+    return m;
+  }
+
   function render() {
     const P = period();
     const q = norm($("q").value.trim());
@@ -777,18 +808,15 @@ dialog.dlg-foto { width: min(560px, calc(100% - 16px)); max-height: calc(100% - 
     $("prev").disabled = $("next").disabled = searching;
     document.querySelectorAll(".seg button").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.view === view)));
     aggiornaConti();
-    const all = rows.filter(r => r.data && visibili.has(contoOf(r)) && (searching ? matches(r, q) : r.data >= P.start && r.data <= P.end))
-      .sort((a, b) => (b.data || "").localeCompare(a.data || "") || (b.creato || 0) - (a.creato || 0));
+    const all = rows.filter(r => visibili.has(contoOf(r)) && nelFiltro(r, P, q)).sort(piuRecenti);
     const inMonth = all.filter(r => !hidden.has(tipoKey(r)));
     const filtered = inMonth.length !== all.length;
     $("totLabel").textContent = (searching ? "Totale dei risultati" : P.tot) + (filtered ? " · filtrato" : "");
-    lastShown = inMonth;
     lastLabel = searching ? "ricerca" : P.label;
-    $("export").disabled = !(inMonth.length || (multiConti() && righeDelPeriodo().length));
+    $("export").disabled = !righeDelPeriodo().length;
 
     // Il totale esclude le voci offerte: il loro importo resta solo nella riga "offerto"
-    const tot = inMonth.filter(r => !r.offerto).reduce((s, r) => s + (r.prezzoCent || 0), 0);
-    const gift = inMonth.filter(r => r.offerto).reduce((s, r) => s + (r.prezzoCent || 0), 0);
+    const { v: tot, g: gift } = somme(inMonth);
     $("total").textContent = euro(tot);
     $("count").textContent = inMonth.length;
     $("giftTotal").textContent = euro(gift);
@@ -802,11 +830,7 @@ dialog.dlg-foto { width: min(560px, calc(100% - 16px)); max-height: calc(100% - 
     if (!chart.hidden) {
       const buckets = [];
       const todayIso = today();
-      const sumIn = (a, b) => {
-        let v = 0, g = 0;
-        inMonth.forEach(r => { if (r.data >= a && r.data <= b) { if (r.offerto) g += r.prezzoCent || 0; else v += r.prezzoCent || 0; } });
-        return { v, g };
-      };
+      const sumIn = (a, b) => somme(inMonth.filter(r => r.data >= a && r.data <= b));
       if (view === "week") {
         const s = weekStart(anchor);
         for (let i = 0; i < 7; i++) { const d = new Date(s); d.setDate(d.getDate() + i); const k = iso(d);
@@ -833,93 +857,74 @@ dialog.dlg-foto { width: min(560px, calc(100% - 16px)); max-height: calc(100% - 
       cols.style.setProperty("--n", buckets.length);
       cols.style.setProperty("--bw", view === "month" ? "40px" : "22px");
       buckets.forEach(b => {
-        const c = document.createElement("div"); c.className = "col" + (b.now ? " now" : "");
-        c.title = `${b.title}: ${euro(b.v)}` + (b.g ? ` · offerto ${euro(b.g)}` : "");
-        const bar = document.createElement("div"); bar.className = "col-bar";
+        const bar = el("div", "col-bar");
         const tot = b.v + b.g;
         if (tot > 0) {
           const both = b.v > 0 && b.g > 0;
           const h = Math.max(both ? 6 : 2, tot / mx * H) - (both ? 2 : 0);
           const hg = b.g ? Math.max(2, h * b.g / tot) : 0, hv = b.v ? Math.max(2, h - hg) : 0;
-          if (b.g) { const ig = document.createElement("i"); ig.className = "g"; ig.style.height = hg + "px"; bar.append(ig); }
-          if (b.v) { const iv = document.createElement("i"); iv.style.height = hv + "px"; bar.append(iv); }
+          if (b.g) { const ig = el("i", "g"); ig.style.height = hg + "px"; bar.append(ig); }
+          if (b.v) { const iv = el("i"); iv.style.height = hv + "px"; bar.append(iv); }
         }
-        const l = document.createElement("span"); l.textContent = b.lab;
-        c.append(bar, l); cols.append(c);
+        const title = `${b.title}: ${euro(b.v)}` + (b.g ? ` · offerto ${euro(b.g)}` : "");
+        cols.append(el("div", { className: "col" + (b.now ? " now" : ""), title }, bar, el("span", null, b.lab)));
       });
     }
 
     // barre per tipologia
     // ogni barra: spese normali (azzurro) seguite dalle offerte (arancio), se ce ne sono
     const byTipo = {};
-    all.forEach(r => { const t = tipoKey(r); const o = byTipo[t] || (byTipo[t] = { v: 0, g: 0 }); if (r.offerto) o.g += r.prezzoCent || 0; else o.v += r.prezzoCent || 0; });
+    raggruppa(all, tipoKey).forEach((lista, t) => { byTipo[t] = somme(lista); });
     const entries = Object.entries(byTipo).sort((a, b) => (b[1].v + b[1].g) - (a[1].v + a[1].g) || b[1].v - a[1].v);
     const bars = $("bars");
     bars.hidden = entries.length === 0;
     bars.replaceChildren();
     const max = Math.max(1, ...entries.map(([, o]) => o.v + o.g));
     const nOff = entries.filter(([t]) => hidden.has(t)).length;
-    const head = document.createElement("div"); head.className = "bars-head";
-    const hl0 = document.createElement("span");
-    hl0.textContent = nOff ? `${nOff} ${nOff === 1 ? "categoria nascosta" : "categorie nascoste"}` : "Tocca una categoria per nasconderla";
-    head.append(hl0);
-    if (nOff) { const sa = document.createElement("button"); sa.type = "button"; sa.className = "link"; sa.textContent = "Mostra tutte"; sa.addEventListener("click", showAll); head.append(sa); }
+    const head = el("div", "bars-head", el("span", null, nOff ? `${nOff} ${nOff === 1 ? "categoria nascosta" : "categorie nascoste"}` : "Tocca una categoria per nasconderla"));
+    if (nOff) head.append(btn("link", "Mostra tutte", showAll));
     bars.append(head);
     entries.forEach(([t, { v, g }]) => {
       const on = !hidden.has(t);
-      const row = document.createElement("button"); row.type = "button"; row.className = "bar-row";
-      row.dataset.tipo = t; row.setAttribute("aria-pressed", String(on));
-      row.title = (on ? "Nascondi " : "Mostra ") + tipoName(t);
-      row.addEventListener("click", () => toggleTipo(t));
-      const dot = document.createElement("span"); dot.className = "dot"; dot.setAttribute("aria-hidden", "true");
-      row.append(dot);
-      const n = document.createElement("span"); n.className = "n"; n.textContent = tipoName(t);
-      const tr = document.createElement("div"); tr.className = "bar-track";
+      const tr = el("div", "bar-track");
       const both = v > 0 && g > 0;
       // le due parti condividono la stessa scala; 2px di stacco tra azzurro e arancio
       const w = (x) => `calc(${(x / max) * 100}%${both ? " - 1px" : ""})`;
-      if (v) { const f = document.createElement("div"); f.className = "bar-fill"; f.style.width = w(v); tr.append(f); }
-      if (g) { const f = document.createElement("div"); f.className = "bar-fill g"; f.style.width = w(g); tr.append(f); }
-      const val = document.createElement("span"); val.className = "v"; val.textContent = euro(v);
-      if (g) { const s = document.createElement("small"); s.textContent = "+ " + euro(g) + " offerto"; val.append(s); }
-      row.append(n, tr, val); bars.append(row);
+      if (v) { const f = el("div", "bar-fill"); f.style.width = w(v); tr.append(f); }
+      if (g) { const f = el("div", "bar-fill g"); f.style.width = w(g); tr.append(f); }
+      bars.append(btn({ className: "bar-row", "data-tipo": t, "aria-pressed": String(on), title: (on ? "Nascondi " : "Mostra ") + tipoName(t) }, [
+        el("span", { className: "dot", "aria-hidden": "true" }),
+        el("span", "n", tipoName(t)),
+        tr,
+        el("span", "v", euro(v), g ? el("small", null, "+ " + euro(g) + " offerto") : null),
+      ], () => toggleTipo(t)));
     });
 
     // elenco per giorno
     const list = $("list");
     list.replaceChildren();
     if (!inMonth.length) {
-      const e = document.createElement("div"); e.className = "empty";
-      if (all.length) {
-        e.innerHTML = `<strong>Tutte le categorie sono nascoste</strong>`;
-        const sa = document.createElement("button"); sa.type = "button"; sa.className = "link"; sa.textContent = "Mostra tutte"; sa.addEventListener("click", showAll);
-        e.append(sa);
-      } else if (searching) {
-        const st = document.createElement("strong"); st.textContent = `Nessun risultato per "${$("q").value.trim()}"`;
-        e.append(st, "Prova con un'altra parola.");
-      } else e.innerHTML = `<strong>Nessuna spesa ${P.empty}</strong>Aggiungi una voce con il modulo qui sopra.`;
-      list.append(e);
+      const vuoto = (titolo, sotto) => el("div", "empty", el("strong", null, titolo), sotto);
+      // col resta null finché l'archivio non è stato letto
+      if (!col) list.append(vuoto("Caricamento…", "Le tue spese compariranno qui."));
+      else if (all.length) list.append(vuoto("Tutte le categorie sono nascoste", btn("link", "Mostra tutte", showAll)));
+      else if (searching) list.append(vuoto(`Nessun risultato per "${$("q").value.trim()}"`, "Prova con un'altra parola."));
+      else list.append(vuoto(`Nessuna spesa ${P.empty}`, "Aggiungi una voce con il modulo qui sopra."));
     } else {
-      const groups = new Map();
-      const byMonth = showDates;
-      const gk = (r) => byMonth ? r.data.slice(0, 7) : r.data;
-      inMonth.forEach(r => { const k = gk(r); if (!groups.has(k)) groups.set(k, []); groups.get(k).push(r); });
-      groups.forEach((items, d) => {
-        const sec = document.createElement("div"); sec.className = "day";
-        const h = document.createElement("h3");
-        const hl = document.createElement("span"); hl.textContent = byMonth ? (searching ? monthFmt : monthNameFmt).format(parseDate(d + "-01")) : dayFmt.format(parseDate(d));
-        const hr = document.createElement("span"); hr.className = "num"; hr.textContent = euro(items.filter(r => !r.offerto).reduce((s, r) => s + (r.prezzoCent || 0), 0));
-        h.append(hl, hr);
-        const ul = document.createElement("ul");
-        items.forEach(r => ul.append(rowEl(r)));
-        sec.append(h, ul); list.append(sec);
+      // con le date su ogni riga si raggruppa per mese, altrimenti per giorno
+      const conConto = multiVisibili();
+      raggruppa(inMonth, r => showDates ? r.data.slice(0, 7) : r.data).forEach((items, d) => {
+        const titolo = showDates ? (searching ? monthFmt : monthNameFmt).format(parseDate(d + "-01")) : dayFmt.format(parseDate(d));
+        const totale = euro(somme(items).v);
+        list.append(el("div", "day",
+          el("h3", null, el("span", null, titolo), el("span", "num", totale)),
+          el("ul", null, ...items.map(r => rowEl(r, conConto)))));
       });
     }
 
     // suggerimenti
-    const tipi = uniqByKey([...canon.tipologia.values(), ...DEFAULT_TIPI]);
-    const eserc = [...canon.esercente.values()];
-    tipiSugg = tipi; fillDatalist("dl-eserc", eserc);
+    tipiSugg = uniqByKey([...canon.tipologia.values(), ...DEFAULT_TIPI]);
+    fillDatalist("dl-eserc", [...canon.esercente.values()]);
     renderQuick();
   }
 
@@ -927,8 +932,7 @@ dialog.dlg-foto { width: min(560px, calc(100% - 16px)); max-height: calc(100% - 
   function renderQuick() {
     const box = $("quick"), ql = $("quickList");
     const byKey = new Map();
-    const recent = [...rows].filter(r => r.esercente && visibili.has(contoOf(r)))
-      .sort((a, b) => (b.data || "").localeCompare(a.data || "") || (b.creato || 0) - (a.creato || 0));
+    const recent = rows.filter(r => r.esercente && visibili.has(contoOf(r))).sort(piuRecenti);
     recent.forEach(r => {
       const k = keyOf(r.esercente);
       if (!byKey.has(k)) byKey.set(k, { last: r, n: 0 });
@@ -938,30 +942,23 @@ dialog.dlg-foto { width: min(560px, calc(100% - 16px)); max-height: calc(100% - 
     ql.replaceChildren();
     box.hidden = !!editingId || !top.length;
     top.forEach(({ last }) => {
-      const b = document.createElement("button"); b.type = "button";
       const en = esercName(last.esercente), tn = last.tipologia ? tipoName(tipoKey(last)) : "";
-      b.title = tn ? `${en} · ${tn}` : en;
-      const n = document.createElement("b"); n.textContent = en;
-      const p = document.createElement("small"); p.textContent = tn || " ";
-      b.append(n, p);
-      b.addEventListener("click", () => quickFill(last));
-      ql.append(b);
+      ql.append(btn({ title: tn ? `${en} · ${tn}` : en }, [el("b", null, en), el("small", null, tn || " ")], () => quickFill(last)));
     });
   }
   function quickFill(r) {
-    resetForm();
+    resetForm(); // svuota anche il prezzo
     $("f-tipo").value = r.tipologia ? tipoName(tipoKey(r)) : "";
     $("f-eserc").value = esercName(r.esercente);
-    $("f-prezzo").value = "";
     $("f-data").value = today();
-    if (visibili.has(contoOf(r))) $("f-conto").value = contoOf(r);
+    const conto = contoOf(r);
+    if (visibili.has(conto)) $("f-conto").value = conto;
     setMsg("Inserisci il prezzo e premi Aggiungi.");
     $("f-prezzo").focus();
   }
 
   function fillDatalist(id, vals) {
-    const dl = $(id); dl.replaceChildren();
-    vals.forEach(v => { const o = document.createElement("option"); o.value = v; dl.append(o); });
+    $(id).replaceChildren(...vals.map(v => el("option", { value: v })));
   }
 
   // ---- Suggerimenti tipologia: compaiono solo dopo 2 lettere ----
@@ -977,10 +974,9 @@ dialog.dlg-foto { width: min(560px, calc(100% - 16px)); max-height: calc(100% - 
     if (!acItems.length) { acClose(); return; }
     acSel = -1;
     acList.replaceChildren(...acItems.map((t, i) => {
-      const li = document.createElement("li"); li.id = "ac-opt-" + i; li.setAttribute("role", "option"); li.setAttribute("aria-selected", "false");
       const at = norm(t).indexOf(q);
-      const b = document.createElement("b"); b.textContent = t.slice(at, at + q.length);
-      li.append(t.slice(0, at), b, t.slice(at + q.length));
+      const li = el("li", { id: "ac-opt-" + i, role: "option", "aria-selected": "false" },
+        t.slice(0, at), el("b", null, t.slice(at, at + q.length)), t.slice(at + q.length));
       li.addEventListener("pointerdown", (e) => { e.preventDefault(); acPick(i); });
       return li;
     }));
@@ -1004,39 +1000,28 @@ dialog.dlg-foto { width: min(560px, calc(100% - 16px)); max-height: calc(100% - 
   });
 
   const ICONA_SCONTRINO = '<svg viewBox="0 0 24 24" width="13" height="13" aria-hidden="true"><path d="M6 3h12v18l-3-2-3 2-3-2-3 2z M9 8h6M9 12h6" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/></svg>';
-  function rowEl(r) {
-    const li = document.createElement("li"); li.className = "row" + (r.id === editingId ? " editing" : r.id === freshId ? " fresh" : "");
-    const who = document.createElement("div"); who.className = "who";
-    if (multiVisibili()) { const cl = document.createElement("div"); cl.className = "conto-lab"; cl.textContent = nomeConto(contoOf(r)); who.append(cl); }
-    const m = document.createElement("div"); m.className = "merchant"; m.textContent = r.esercente || "—";
-    const tags = document.createElement("div"); tags.className = "tags";
-    if (showDates && r.data) { const dt = document.createElement("span"); dt.className = "when"; dt.textContent = shortFmt.format(parseDate(r.data)); tags.append(dt); }
-    const c = document.createElement("button"); c.type = "button"; c.className = "chip chip-btn"; c.textContent = tipoName(tipoKey(r));
-    c.title = "Mostra solo " + tipoName(tipoKey(r));
-    c.addEventListener("click", () => onlyTipo(tipoKey(r)));
-    tags.append(c);
-    if (r.offerto) { const g = document.createElement("span"); g.className = "chip gift"; g.textContent = "Offerto"; tags.append(g); }
+  // conConto: si mostra il nome del conto sopra l'esercente (più conti visibili)
+  function rowEl(r, conConto) {
+    const t = tipoKey(r);
+    const tags = el("div", "tags");
+    if (showDates && r.data) tags.append(el("span", "when", shortFmt.format(parseDate(r.data))));
+    tags.append(btn({ className: "chip chip-btn", title: "Mostra solo " + tipoName(t) }, tipoName(t), () => onlyTipo(t)));
+    if (r.offerto) tags.append(el("span", "chip gift", "Offerto"));
     if (r.foto) {
-      const f = document.createElement("button"); f.type = "button"; f.className = "chip chip-btn foto";
-      f.innerHTML = ICONA_SCONTRINO; f.append("Scontrino"); f.title = "Vedi la foto dello scontrino";
-      f.addEventListener("click", () => apriFoto(r.id));
+      const f = btn({ className: "chip chip-btn foto", title: "Vedi la foto dello scontrino" }, null, () => apriFoto(r.id));
+      f.innerHTML = ICONA_SCONTRINO; f.append("Scontrino");
       tags.append(f);
     }
-    who.append(m);
-    if (r.nota) { const nt = document.createElement("div"); nt.className = "nota"; nt.textContent = r.nota; who.append(nt); }
-    who.append(tags);
-    const amt = document.createElement("div"); amt.className = "amt"; amt.textContent = euro(r.prezzoCent);
-    const act = document.createElement("div"); act.className = "row-actions";
-    const ed = document.createElement("button"); ed.type = "button"; ed.textContent = "Modifica";
-    ed.addEventListener("click", () => startEdit(r));
-    const del = document.createElement("button"); del.type = "button";
+    const who = el("div", "who",
+      conConto ? el("div", "conto-lab", nomeConto(contoOf(r))) : null,
+      el("div", "merchant", r.esercente || "—"),
+      r.nota ? el("div", "nota", r.nota) : null,
+      tags);
     const confirming = pendingDelete === r.id;
-    del.textContent = confirming ? "Conferma" : "Elimina";
-    if (confirming) del.className = "confirm";
-    del.addEventListener("click", () => onDelete(r));
-    act.append(ed, del);
-    li.append(who, amt, act);
-    return li;
+    const act = el("div", "row-actions",
+      btn(null, "Modifica", () => startEdit(r)),
+      btn(confirming ? "confirm" : null, confirming ? "Conferma" : "Elimina", () => onDelete(r)));
+    return el("li", "row" + (r.id === editingId ? " editing" : r.id === freshId ? " fresh" : ""), who, el("div", "amt", euro(r.prezzoCent)), act);
   }
 
   function startEdit(r) {
@@ -1073,7 +1058,6 @@ dialog.dlg-foto { width: min(560px, calc(100% - 16px)); max-height: calc(100% - 
   }
   $("f-nota").addEventListener("input", updNotaCnt);
 
-  function setMsg(t, err) { const m = $("msg"); m.textContent = t; m.className = "form-msg" + (err ? " err" : ""); }
   let esitoTimer = null;
   function esito(t, err) {
     const e = $("esito"); clearTimeout(esitoTimer);
@@ -1083,23 +1067,23 @@ dialog.dlg-foto { width: min(560px, calc(100% - 16px)); max-height: calc(100% - 
 
   // ---- Finestra della spesa: nuova voce, modifica, completamento dello scontrino ----
   const spesaDlg = $("spesaDlg");
-  function apriSpesa(focusId) {
+  function apriSpesa() {
     acClose();
     if (!spesaDlg.open) spesaDlg.showModal();
     spesaDlg.scrollTop = 0;
-    if (focusId) $(focusId).focus();
   }
   function chiudiSpesa() { if (spesaDlg.open) spesaDlg.close(); }
-  // chiusa senza salvare (X, Annulla, tasto Esc): si scarta quello che c'era nel modulo
-  spesaDlg.addEventListener("close", () => {
+  // Uscita dalla finestra: si svuota il modulo e si ridisegna.
+  // La fa l'evento "close", qualunque sia il modo di chiudere (X, Annulla, tasto Esc, salvataggio)
+  function esciSpesa() {
     acClose();
-    const eraModifica = !!editingId;
     resetForm(); setMsg("");
-    if (eraModifica) render();
-  });
+    render();
+  }
+  spesaDlg.addEventListener("close", esciSpesa);
   $("chiudiSpesa").addEventListener("click", chiudiSpesa);
   $("nuovaBtn").addEventListener("click", () => {
-    resetForm(); setMsg(""); esito(""); renderQuick();
+    resetForm(); setMsg(""); esito("");
     apriSpesa();
   });
 
@@ -1107,7 +1091,12 @@ dialog.dlg-foto { width: min(560px, calc(100% - 16px)); max-height: calc(100% - 
     if (pendingDelete !== r.id) { pendingDelete = r.id; render(); setTimeout(() => { if (pendingDelete === r.id) { pendingDelete = null; render(); } }, 4000); return; }
     pendingDelete = null;
     if (!col) return;
-    try { await col.doc(r.id).delete(); if (editingId === r.id) resetForm(); esito("Voce eliminata."); }
+    try {
+      await col.doc(r.id).delete();
+      // con un tocco rapido su "Modifica" mentre si salvava, il modulo potrebbe avere aperta la voce appena eliminata
+      if (editingId === r.id) resetForm();
+      render(); esito("Voce eliminata.");
+    }
     catch (e) { esito("Eliminazione non riuscita. Riprova.", true); }
   }
 
@@ -1134,12 +1123,12 @@ dialog.dlg-foto { width: min(560px, calc(100% - 16px)); max-height: calc(100% - 
         let foto = null, fotoErr = false;
         if (fotoInAttesa) { foto = await salvaFoto(fotoInAttesa); fotoErr = !foto; }
         await col.add({ tipologia, esercente, prezzoCent, data, offerto, nota, conto, creato: Date.now(), ...foto ? { foto, daScontrino: true } : {} });
-        try { localStorage.setItem("spese.ultimoConto", conto); } catch (e) {}
+        lsSet("spese.ultimoConto", conto);
         esito((visibili.has(conto) ? "Spesa aggiunta." : `Spesa aggiunta nel conto «${nomeConto(conto)}», che non stai guardando.`) + (fotoErr ? " La foto dello scontrino non è stata salvata." : ""), fotoErr);
       }
       anchor = parseDate(data);
-      editingId = null;
-      chiudiSpesa(); resetForm(); setMsg(""); render();
+      // "close" arriva un attimo dopo: il riepilogo deve essere già aggiornato insieme al messaggio
+      chiudiSpesa(); esciSpesa();
     } catch (e) {
       setMsg(e && e.code === "quota_exceeded" ? "Spazio esaurito: elimina qualche voce vecchia." : "Salvataggio non riuscito. Riprova.", true);
     } finally { $("save").disabled = false; }
@@ -1155,129 +1144,147 @@ dialog.dlg-foto { width: min(560px, calc(100% - 16px)); max-height: calc(100% - 
 
   // ---- Finestra dei conti: quali vedere, aggiungerne di nuovi ----
   const contiDlg = $("contiDlg");
-  function contiMsg(t, err) { const m = $("contiMsg"); m.textContent = t; m.className = "form-msg" + (err ? " err" : ""); }
   // Conto aperto con la matita (uno alla volta) e passo dell'eliminazione
   let contoAperto = null, eliminando = false;
   const PENCIL = '<svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M4 20h4L19 9a2.1 2.1 0 0 0-3-3L5 17z M14.5 7.5l3 3" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></svg>';
   const CAMERA = '<svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M4 8h3l2-2.5h6L17 8h3v11H4z" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linejoin="round"/><circle cx="12" cy="13" r="3.2" fill="none" stroke="currentColor" stroke-width="1.9"/></svg>';
-  const el = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; };
-  const btn = (cls, text, fn) => { const b = el("button", cls, text); b.type = "button"; b.addEventListener("click", fn); return b; };
   const spese = (n) => n === 1 ? "1 spesa" : `${n} spese`;
+  // Riga di una lista con spunta: <label><casella>…</label>, spuntata se l'id è nell'insieme.
+  // Toccarla aggiunge o toglie l'id dall'insieme, poi chiama dopo()
+  function rigaSpunta(insieme, id, disabled, contenuto, dopo) {
+    const cb = el("input", { type: "checkbox", checked: insieme.has(id), disabled });
+    cb.addEventListener("change", () => { if (cb.checked) insieme.add(id); else insieme.delete(id); dopo(); });
+    return el("label", null, cb, ...contenuto);
+  }
 
   function renderContiList() {
     const ul = $("contiList");
     const nVis = conti.filter(c => visibili.has(c.id)).length;
-    const conta = new Map(); rows.forEach(r => { const k = contoOf(r); conta.set(k, (conta.get(k) || 0) + 1); });
+    const conta = contaPer(rows, contoOf);
     if (contoAperto && !conti.some(c => c.id === contoAperto)) contoAperto = null;
     ul.replaceChildren(...conti.map(c => {
       const li = el("li"); const k = conta.get(c.id) || 0;
       if (c.id === contoAperto) { li.className = "aperto"; li.append(pannelloConto(c, k)); return li; }
-      const lab = el("label");
-      const cb = el("input"); cb.type = "checkbox"; cb.checked = visibili.has(c.id);
+      let cam = null;
+      if (c.foto) { cam = el("span", { className: "cam", title: "Salva la foto degli scontrini", "aria-label": "salva la foto degli scontrini" }); cam.innerHTML = CAMERA; }
       // almeno un conto resta sempre visibile
-      cb.disabled = cb.checked && nVis === 1;
-      cb.addEventListener("change", () => {
-        if (cb.checked) visibili.add(c.id); else visibili.delete(c.id);
+      const lab = rigaSpunta(visibili, c.id, visibili.has(c.id) && nVis === 1, [el("span", "nome", c.nome), cam, el("small", null, spese(k))], () => {
         pulisciVisibili(); saveVisibili();
-        if (!editingId) $("f-conto").value = contoPredefinito();
+        $("f-conto").value = contoPredefinito();
         render(); renderContiList();
       });
-      lab.append(cb, el("span", "nome", c.nome));
-      if (c.foto) { const cam = el("span", "cam"); cam.innerHTML = CAMERA; cam.title = "Salva la foto degli scontrini"; cam.setAttribute("aria-label", "salva la foto degli scontrini"); lab.append(cam); }
-      lab.append(el("small", null, spese(k)));
-      const mat = btn("matita", null, () => { contoAperto = c.id; eliminando = false; contiMsg(""); renderContiList(); const i = ul.querySelector(".conto-edit input"); if (i) { i.focus(); i.select(); } });
-      mat.innerHTML = PENCIL; mat.setAttribute("aria-label", `Modifica il conto ${c.nome}`); mat.title = "Modifica o elimina";
+      const mat = btn({ className: "matita", "aria-label": `Modifica il conto ${c.nome}`, title: "Modifica o elimina" }, null, () => { contoAperto = c.id; eliminando = false; contiMsg(""); renderContiList(); const i = ul.querySelector(".conto-edit input"); if (i) { i.focus(); i.select(); } });
+      mat.innerHTML = PENCIL;
       li.append(lab, mat); return li;
     }));
   }
 
   // Pannello della matita: nuovo nome, oppure eliminazione (con scelta su cosa fare delle spese)
   function pannelloConto(c, k) {
-    const box = el("div", "conto-edit");
     const chiudi = () => { contoAperto = null; eliminando = false; renderContiList(); };
+    // riga dei pulsanti in fondo: quelli dati, poi "Annulla"
+    const azioni = (pulsante) => el("div", "edit-azioni", pulsante, btn("link", "Annulla", chiudi));
     if (!eliminando) {
-      const riga = el("div", "nuovo-conto");
-      const inp = el("input"); inp.type = "text"; inp.maxLength = 30; inp.value = c.nome; inp.setAttribute("aria-label", "Nome del conto"); inp.autocomplete = "off";
-      const spunta = el("label", "spunta"); const cf = el("input"); cf.type = "checkbox"; cf.checked = !!c.foto;
-      spunta.append(cf, el("span", null, "Salva la foto degli scontrini in questo conto"));
+      const inp = el("input", { type: "text", maxLength: 30, value: c.nome, "aria-label": "Nome del conto", autocomplete: "off" });
+      const cf = el("input", { type: "checkbox", checked: !!c.foto });
       const salva = () => aggiornaConto(c, inp.value, cf.checked);
       inp.addEventListener("keydown", (e) => { if (e.key === "Enter") { e.preventDefault(); salva(); } else if (e.key === "Escape") { e.preventDefault(); chiudi(); } });
-      riga.append(inp, btn("primary", "Salva", salva));
-      box.append(riga, spunta);
-      const azioni = el("div", "edit-azioni");
-      const del = btn("link danger", "Elimina conto", () => { eliminando = true; contiMsg(""); renderContiList(); });
-      if (conti.length === 1) { del.disabled = true; del.title = "È l'unico conto"; }
-      azioni.append(del, btn("link", "Annulla", chiudi));
-      box.append(azioni);
-      if (conti.length === 1) box.append(el("small", "hint", "È l'unico conto: non si può eliminare."));
-      return box;
+      const unico = conti.length === 1;
+      const del = btn({ className: "link danger", disabled: unico, title: unico ? "È l'unico conto" : null }, "Elimina conto", () => { eliminando = true; contiMsg(""); renderContiList(); });
+      return el("div", "conto-edit",
+        el("div", "nuovo-conto", inp, btn("primary", "Salva", salva)),
+        el("label", "spunta", cf, el("span", null, "Salva la foto degli scontrini in questo conto")),
+        azioni(del),
+        unico ? el("small", "hint", "È l'unico conto: non si può eliminare.") : null);
+    }
+    if (!k) {
+      return el("div", "conto-edit",
+        el("p", "domanda", `Eliminare il conto «${c.nome}»? Non ha spese.`),
+        azioni(btn("danger-btn", "Elimina", () => eliminaConto(c, null))));
     }
     const altri = conti.filter(x => x.id !== c.id);
-    if (!k) {
-      box.append(el("p", "domanda", `Eliminare il conto «${c.nome}»? Non ha spese.`));
-      const az = el("div", "edit-azioni");
-      az.append(btn("danger-btn", "Elimina", () => eliminaConto(c, null)), btn("link", "Annulla", chiudi));
-      box.append(az); return box;
-    }
-    box.append(el("p", "domanda", `«${c.nome}» ha ${spese(k)}. Cosa ne faccio?`));
-    const riga = el("div", "nuovo-conto");
-    const sel = el("select"); sel.setAttribute("aria-label", "Conto in cui spostare le spese");
-    altri.forEach(x => { const o = el("option", null, x.nome); o.value = x.id; sel.append(o); });
-    riga.append(btn("primary", "Spostale in", () => eliminaConto(c, sel.value)), sel);
-    const az = el("div", "edit-azioni");
-    az.append(btn("danger-btn", `Elimina anche le spese`, () => eliminaConto(c, false)), btn("link", "Annulla", chiudi));
-    box.append(riga, az);
-    return box;
+    const sel = el("select", { "aria-label": "Conto in cui spostare le spese" }, ...altri.map(x => el("option", { value: x.id }, x.nome)));
+    return el("div", "conto-edit",
+      el("p", "domanda", `«${c.nome}» ha ${spese(k)}. Cosa ne faccio?`),
+      el("div", "nuovo-conto", btn("primary", "Spostale in", () => eliminaConto(c, sel.value)), sel),
+      azioni(btn("danger-btn", "Elimina anche le spese", () => eliminaConto(c, false))));
   }
 
-  async function salvaTutto(annulla) {
-    try { await persist(); emit(); return true; }
-    catch (e) { annulla(); contiMsg("Salvataggio non riuscito. Riprova.", true); render(); renderContiList(); return false; }
+  // Salva una modifica dei conti (vedi modifica()); se non riesce lo dice e ridisegna con i conti di prima.
+  // Risponde con quello che fn ha deciso, oppure null (niente da fare, o salvataggio non riuscito)
+  async function salvaConti(fn) {
+    try { return await modifica(fn); }
+    catch (e) { contiMsg("Salvataggio non riuscito. Riprova.", true); render(); renderContiList(); return null; }
+  }
+  // Nome del conto ripulito, oppure null (con il messaggio d'errore) se è vuoto o già usato da un altro conto
+  function nomeContoValido(valore, id) {
+    const nome = String(valore).trim().replace(/\s+/g, " ").slice(0, 30);
+    if (!nome) { contiMsg("Scrivi il nome del conto.", true); return null; }
+    if (conti.some(x => x.id !== id && keyOf(x.nome) === keyOf(nome))) { contiMsg(`Il conto «${nome}» esiste già.`, true); return null; }
+    return nome;
   }
   // Matita → Salva: nuovo nome e preferenza "salva la foto"
   async function aggiornaConto(c, valore, foto) {
-    const nome = String(valore).trim().replace(/\s+/g, " ").slice(0, 30);
-    if (!nome) { contiMsg("Scrivi il nome del conto.", true); return; }
-    if (conti.some(x => x.id !== c.id && keyOf(x.nome) === keyOf(nome))) { contiMsg(`Il conto «${nome}» esiste già.`, true); return; }
-    const vecchio = { nome: c.nome, foto: c.foto };
-    c.nome = nome; c.foto = !!foto;
-    if (!(await salvaTutto(() => { c.nome = vecchio.nome; c.foto = vecchio.foto; }))) return;
+    foto = !!foto;
+    let nome, vecchio;
+    // il nome si controlla in fila: un'altra modifica dei conti può essere arrivata prima
+    const fatto = await salvaConti(() => {
+      vecchio = conti.find(x => x.id === c.id);
+      nome = vecchio && nomeContoValido(valore, c.id);
+      if (!nome) return null;
+      return { conti: conti.map(x => x.id === c.id ? { ...x, nome, foto } : x) };
+    });
+    if (!fatto) return;
     contoAperto = null;
     const msg = [];
     if (nome !== vecchio.nome) msg.push(`Conto rinominato in «${nome}».`);
-    if (c.foto !== vecchio.foto) msg.push(c.foto ? `In «${nome}» la foto dello scontrino si salva.` : `In «${nome}» la foto dello scontrino non si salva.`);
+    if (foto !== vecchio.foto) msg.push(foto ? `In «${nome}» la foto dello scontrino si salva.` : `In «${nome}» la foto dello scontrino non si salva.`);
     contiMsg(msg.join(" "));
     render(); renderContiList();
   }
   // dest: id del conto in cui spostare le spese; false: elimina anche le spese; null: il conto è vuoto
   async function eliminaConto(c, dest) {
-    if (conti.length < 2) return;
-    const prima = { conti: [...conti], store: store.map(r => ({ ...r })), vis: [...visibili] };
-    const suoi = new Set(store.filter(r => contoOf(r) === c.id).map(r => r.id));
-    if (dest) store.forEach(r => { if (suoi.has(r.id)) r.conto = dest; });
-    else if (dest === false) store = store.filter(r => !suoi.has(r.id));
-    const eraVisibile = visibili.has(c.id);
-    conti = conti.filter(x => x.id !== c.id);
-    visibili.delete(c.id);
-    // se era l'unico visibile, si passa al conto che ha ricevuto le spese
-    if (eraVisibile && !conti.some(x => visibili.has(x.id))) visibili.add(dest || conti[0].id);
-    pulisciVisibili(); saveVisibili();
-    const ok = await salvaTutto(() => { conti = prima.conti; store = prima.store; visibili.clear(); prima.vis.forEach(v => visibili.add(v)); saveVisibili(); });
-    if (!ok) return;
-    if (dest === false) prima.store.forEach(r => { if (suoi.has(r.id) && r.foto) cancellaFoto(r.foto); });
-    if (editingId && !store.some(r => r.id === editingId)) resetForm();
-    if (!editingId) $("f-conto").value = contoPredefinito();
+    let suoi, foto = [];
+    const fatto = await salvaConti(() => {
+      if (conti.length < 2 || !conti.some(x => x.id === c.id)) return null;
+      suoi = new Set(store.filter(r => contoOf(r) === c.id).map(r => r.id));
+      let nuovo = store;
+      if (dest) nuovo = store.map(r => suoi.has(r.id) ? { ...r, conto: dest } : r);
+      else if (dest === false) {
+        foto = store.filter(r => suoi.has(r.id) && r.foto).map(r => r.foto);
+        nuovo = store.filter(r => !suoi.has(r.id));
+      }
+      return {
+        store: nuovo,
+        conti: conti.filter(x => x.id !== c.id),
+        // conti è già quello nuovo: se il conto eliminato era l'unico visibile, si passa a quello che ha ricevuto le spese
+        visibili: (vis) => {
+          const eraVisibile = vis.delete(c.id);
+          if (eraVisibile && !conti.some(x => vis.has(x.id))) vis.add(dest || conti[0].id);
+          pulisciVisibili();
+        },
+      };
+    });
+    if (!fatto) return;
+    foto.forEach(f => cancellaFoto(f));
+    $("f-conto").value = contoPredefinito();
     contoAperto = null; eliminando = false;
     contiMsg(`Conto «${c.nome}» eliminato` + (dest ? `: spese spostate in «${nomeConto(dest)}».` : dest === false ? ` insieme a ${spese(suoi.size)}.` : "."));
     render(); renderContiList();
   }
   async function aggiungiConto() {
-    const nome = $("nuovoConto").value.trim().replace(/\s+/g, " ").slice(0, 30);
-    if (!nome) { contiMsg("Scrivi il nome del conto.", true); $("nuovoConto").focus(); return; }
-    if (conti.some(c => keyOf(c.nome) === keyOf(nome))) { contiMsg(`Il conto «${nome}» esiste già.`, true); $("nuovoConto").focus(); return; }
-    const c = { id: newId(), nome, foto: $("nuovoContoFoto").checked };
-    conti.push(c); visibili.add(c.id); saveVisibili();
-    try { await persist(); } catch (e) { conti = conti.filter(x => x.id !== c.id); visibili.delete(c.id); saveVisibili(); contiMsg("Salvataggio non riuscito. Riprova.", true); return; }
+    const valore = $("nuovoConto").value, foto = $("nuovoContoFoto").checked;
+    let nome, fatto;
+    try {
+      // il nome si controlla in fila: con un doppio tocco su Aggiungi il secondo trova il conto appena aggiunto
+      fatto = await modifica(() => {
+        nome = nomeContoValido(valore, null);
+        if (!nome) return null;
+        const c = { id: newId(), nome, foto };
+        return { conti: [...conti, c], visibili: (vis) => vis.add(c.id) };
+      });
+    } catch (e) { contiMsg("Salvataggio non riuscito. Riprova.", true); return; }
+    if (!fatto) { $("nuovoConto").focus(); return; }
     $("nuovoConto").value = ""; $("nuovoContoFoto").checked = false;
     contiMsg(`Conto «${nome}» aggiunto.`);
     render(); renderContiList();
@@ -1296,47 +1303,49 @@ dialog.dlg-foto { width: min(560px, calc(100% - 16px)); max-height: calc(100% - 
   // Toccare un conto lo seleziona soltanto: si conferma con "Fatto", così un tocco sbagliato non salva nulla.
   // La casella segue la preferenza del conto selezionato finché non la si tocca a mano; da lì resta com'è.
   // Con un solo conto c'è solo la casella e "Fatto". Risponde { conto, foto } oppure null se annullato
+  // Finestra che risponde con una promessa: il pulsante ok la chiude con risposta(),
+  // annulla (o Esc, o un tocco fuori) con null. aperta(): misure da prendere a finestra aperta
+  function chiedi(d, ok, annulla, risposta, aperta) {
+    return new Promise((resolve) => {
+      let valore = null;
+      $(ok).onclick = () => { valore = risposta(); d.close(); };
+      $(annulla).onclick = () => d.close();
+      d.addEventListener("close", () => resolve(valore), { once: true });
+      d.showModal();
+      if (aperta) aperta();
+      $(ok).focus();
+    });
+  }
+
   const CONTI_VISIBILI = 5;
   function chiediConto() {
-    return new Promise((resolve) => {
-      const d = $("scanDlg"), box = $("scanConti"), nota = $("scanContiNota"), casella = $("scanFoto");
-      let scelto = null, toccata = false;
-      const piu = multiConti();
-      const fotoDi = (id) => !!(conti.find(c => c.id === id) || {}).foto;
-      casella.onchange = () => { toccata = true; };
-      box.onchange = (e) => { if (!toccata && e.target.name === "scanConto") casella.checked = fotoDi(e.target.value); };
-      $("scanDlgTitle").hidden = box.hidden = !piu;
-      const ordine = [...conti].sort((a, b) => (visibili.has(b.id) - visibili.has(a.id)));
-      const pred = contoPredefinito();
-      box.replaceChildren(...ordine.map(c => {
-        const li = document.createElement("li"), lab = document.createElement("label");
-        const r = document.createElement("input"); r.type = "radio"; r.name = "scanConto"; r.value = c.id;
-        r.checked = c.id === pred;
-        const n = document.createElement("span"); n.className = "nome"; n.textContent = c.nome;
-        lab.append(r, n); li.append(lab); return li;
-      }));
-      if (piu && !box.querySelector("input:checked")) box.querySelector("input").checked = true;
-      casella.checked = fotoDi(piu ? box.querySelector("input:checked").value : baseId());
-      const troppi = piu && ordine.length > CONTI_VISIBILI;
-      nota.hidden = !troppi;
-      nota.textContent = troppi ? `${ordine.length} conti: scorri per vederli tutti.` : "";
-      $("scanFatto").onclick = () => {
-        scelto = piu ? (box.querySelector("input:checked") || {}).value || null : baseId();
-        d.close();
-      };
-      $("scanDlgAnnulla").onclick = () => d.close();
-      d.addEventListener("close", () => resolve(scelto ? { conto: scelto, foto: $("scanFoto").checked } : null), { once: true });
-      box.style.maxHeight = "";
-      box.scrollTop = 0;
-      d.showModal();
-      if (troppi) {
-        // altezza del riquadro = esattamente i primi 5 conti; il conto selezionato viene portato in vista
-        const righe = box.children;
-        box.style.maxHeight = (righe[CONTI_VISIBILI].offsetTop + 2) + "px";
-        const sel = box.querySelector("input:checked");
-        if (sel) { const li = sel.closest("li"); box.scrollTop = Math.max(0, li.offsetTop + li.offsetHeight - box.clientHeight); }
-      }
-      $("scanFatto").focus();
+    const box = $("scanConti"), nota = $("scanContiNota"), casella = $("scanFoto");
+    let toccata = false;
+    const piu = multiConti();
+    const fotoDelConto = (id) => !!(conti.find(c => c.id === id) || {}).foto;
+    casella.onchange = () => { toccata = true; };
+    box.onchange = (e) => { if (!toccata && e.target.name === "scanConto") casella.checked = fotoDelConto(e.target.value); };
+    $("scanDlgTitle").hidden = box.hidden = !piu;
+    const ordine = [...conti].sort((a, b) => (visibili.has(b.id) - visibili.has(a.id)));
+    // il conto proposto esiste sempre (con un solo conto è proprio quello)
+    const pred = contoPredefinito();
+    box.replaceChildren(...ordine.map(c => el("li", null, el("label", null,
+      el("input", { type: "radio", name: "scanConto", value: c.id, checked: c.id === pred }),
+      el("span", "nome", c.nome)))));
+    casella.checked = fotoDelConto(pred);
+    const troppi = piu && ordine.length > CONTI_VISIBILI;
+    nota.hidden = !troppi;
+    nota.textContent = troppi ? `${ordine.length} conti: scorri per vederli tutti.` : "";
+    box.style.maxHeight = "";
+    box.scrollTop = 0;
+    const risposta = () => ({ conto: piu ? box.querySelector("input:checked").value : baseId(), foto: casella.checked });
+    return chiedi($("scanDlg"), "scanFatto", "scanDlgAnnulla", risposta, () => {
+      if (!troppi) return;
+      // altezza del riquadro = esattamente i primi 5 conti; il conto selezionato viene portato in vista
+      const righe = box.children;
+      box.style.maxHeight = (righe[CONTI_VISIBILI].offsetTop + 2) + "px";
+      const sel = box.querySelector("input:checked");
+      if (sel) { const li = sel.closest("li"); box.scrollTop = Math.max(0, li.offsetTop + li.offsetHeight - box.clientHeight); }
     });
   }
 
@@ -1346,8 +1355,7 @@ dialog.dlg-foto { width: min(560px, calc(100% - 16px)); max-height: calc(100% - 
     box.hidden = !text;
     box.className = "scan-status" + (err ? " err" : "");
     const t = $("scanText"); t.textContent = text || ""; t.className = "scan-text" + (busy ? " dots" : "");
-    const a = $("scanActions"); a.replaceChildren();
-    actions.forEach(([label, fn]) => { const b = document.createElement("button"); b.type = "button"; b.textContent = label; b.addEventListener("click", fn); a.append(b); });
+    $("scanActions").replaceChildren(...actions.map(([label, fn]) => btn(null, label, fn)));
     $("scanBtn").classList.toggle("busy", busy);
   }
 
@@ -1387,13 +1395,12 @@ dialog.dlg-foto { width: min(560px, calc(100% - 16px)); max-height: calc(100% - 
 
     // Data: gg/mm/aaaa (o aa), la più recente non nel futuro
     let data = null;
-    const today = todayStr;
     for (const l of lines) {
       for (const m of l.matchAll(/(?<!\d)(\d{1,2})\s?[\/.\-]\s?(\d{1,2})\s?[\/.\-]\s?(\d{4}|\d{2})(?!\d)/g)) {
         let [, d, mo, y] = m; d = +d; mo = +mo; y = +y; if (y < 100) y += 2000;
         if (mo < 1 || mo > 12 || d < 1 || d > 31 || y < 2000) continue;
-        const iso = `${y}-${String(mo).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
-        if (iso <= today && (!data || iso > data)) data = iso;
+        const letta = `${y}-${pad(mo)}-${pad(d)}`;
+        if (letta <= todayStr && (!data || letta > data)) data = letta;
       }
     }
 
@@ -1460,35 +1467,75 @@ dialog.dlg-foto { width: min(560px, calc(100% - 16px)); max-height: calc(100% - 
         return JSON.parse(r.data);
       } catch (e) { return null; }
     }
-    try { const s = localStorage.getItem(LS_KEY); return s ? JSON.parse(s) : null; } catch (e) { return null; }
+    return lsJson(LS_KEY);
   }
-  let writing = Promise.resolve();
-  function persist() {
-    const payload = JSON.stringify({ versione: 1, spese: store, conti });
-    writing = writing.then(async () => {
-      if (FS) await FS.writeFile({ path: DATA_FILE, directory: "DATA", data: payload, encoding: "utf8" });
-      else localStorage.setItem(LS_KEY, payload);
-    });
-    return writing;
-  }
+  // Contenuto di spese.json (e del backup): l'ordine delle chiavi non cambia
+  const archivio = (spese = store, elenco = conti) => ({ versione: 1, spese, conti: elenco });
+  // Le spese come le vede chi ascolta (onSnapshot): { docs: [{ id, data() }] }
+  const istantanea = () => ({ docs: store.map(r => ({ id: r.id, data: () => { const { id, ...d } = r; return d; } })) });
   function emit() {
-    const docs = store.map(r => ({ id: r.id, data: () => { const { id, ...d } = r; return d; } }));
-    listeners.forEach(fn => fn({ docs }));
+    const snap = istantanea();
+    listeners.forEach(fn => fn(snap));
   }
+  async function scriviArchivio(dati) {
+    const payload = JSON.stringify(dati);
+    if (FS) await FS.writeFile({ path: DATA_FILE, directory: "DATA", data: payload, encoding: "utf8" });
+    else localStorage.setItem(LS_KEY, payload);
+  }
+
+  // Unico modo di cambiare spese e conti salvati.
+  // fn legge lo stato attuale (store, conti, visibili) SENZA toccarlo e risponde con quello che cambia:
+  //   { store: nuovo elenco delle spese, conti: nuovo elenco dei conti, visibili: (vis) => aggiorna i conti visibili }
+  // (quello che manca resta com'è), oppure null se non c'è niente da fare.
+  // Il nuovo stato si scrive in spese.json e prende il posto di quello attuale solo se la scrittura riesce;
+  // i conti visibili si aggiornano (e si ricordano) solo allora, con i conti nuovi già al loro posto.
+  // Se la scrittura non riesce non cambia nulla e l'errore arriva a chi ha chiamato.
+  // Le modifiche vanno in fila, intere (lettura, calcolo, scrittura): ognuna parte da quello che ha lasciato
+  // la precedente, e un errore non ferma quelle dopo.
+  let fila = Promise.resolve();
+  function modifica(fn) {
+    const giro = fila.then(async () => {
+      const nuovo = fn();
+      if (!nuovo) return null;
+      const spese = nuovo.store || store, elenco = nuovo.conti || conti;
+      await scriviArchivio(archivio(spese, elenco));
+      store = spese; conti = elenco;
+      if (nuovo.visibili) { nuovo.visibili(visibili); saveVisibili(); }
+      emit();
+      return nuovo;
+    });
+    fila = giro.catch(() => {});
+    return giro;
+  }
+
   // Stessa forma usata dal resto della pagina: add / doc(id).set / doc(id).delete
   const localCol = {
-    async add(d) { const id = newId(); store.push({ id, ...d }); await persist(); emit(); return { id }; },
+    async add(d) {
+      const id = newId();
+      await modifica(() => ({ store: [...store, { id, ...d }] }));
+      return { id };
+    },
     doc(id) {
       return {
-        async set(d) { const i = store.findIndex(r => r.id === id); const row = { id, ...d }; if (i >= 0) store[i] = row; else store.push(row); await persist(); emit(); },
+        async set(d) {
+          await modifica(() => {
+            const nuovo = [...store], row = { id, ...d };
+            const i = nuovo.findIndex(r => r.id === id);
+            if (i >= 0) nuovo[i] = row; else nuovo.push(row);
+            return { store: nuovo };
+          });
+        },
         async delete() {
-          const r = store.find(x => x.id === id);
-          store = store.filter(x => x.id !== id); await persist(); emit();
+          let r = null;
+          await modifica(() => {
+            r = store.find(x => x.id === id);
+            return { store: store.filter(x => x.id !== id) };
+          });
           if (r && r.foto) cancellaFoto(r.foto);
         },
       };
     },
-    onSnapshot(fn) { listeners.push(fn); fn({ docs: store.map(r => ({ id: r.id, data: () => { const { id, ...d } = r; return d; } })) }); return () => {}; },
+    onSnapshot(fn) { listeners.push(fn); fn(istantanea()); return () => {}; },
   };
 
   // ---- Foto degli scontrini: file JPEG nella memoria privata dell'app (cartella "scontrini") ----
@@ -1559,13 +1606,19 @@ dialog.dlg-foto { width: min(560px, calc(100% - 16px)); max-height: calc(100% - 
   $("fotoElimina").addEventListener("click", async () => {
     const b = $("fotoElimina");
     if (!fotoConferma) { fotoConferma = true; b.textContent = "Conferma: elimina la foto"; return; }
-    const r = store.find(x => x.id === fotoDi);
-    if (!r) { fotoDlg.close(); return; }
+    const id = fotoDi;
+    if (!store.some(x => x.id === id)) { fotoDlg.close(); return; }
     b.disabled = true;
-    const { foto, ...resto } = r;
+    let foto = null;
     try {
-      const { id, ...d } = resto;
-      await col.doc(id).set(d);
+      // la spesa resta com'è, senza il campo "foto" (scritta come prima: id in testa)
+      await modifica(() => ({ store: store.map(r => {
+        if (r.id !== id) return r;
+        const { id: _, foto: f, ...d } = r;
+        foto = f;
+        return { id, ...d };
+      }) }));
+      render();
       cancellaFoto(foto);
       fotoDlg.close(); esito("Foto dello scontrino eliminata. La spesa resta.");
     } catch (e) { b.disabled = false; b.textContent = "Riprova"; }
@@ -1597,9 +1650,9 @@ dialog.dlg-foto { width: min(560px, calc(100% - 16px)); max-height: calc(100% - 
     scanning = true;
     try {
       // Con più conti si sceglie prima dove mettere lo scontrino
-      const s = await chiediConto();
-      if (!s) { scanStatus(""); return; }
-      const conto = s.conto, conFoto = s.foto;
+      const scelta = await chiediConto();
+      if (!scelta) { scanStatus(""); return; }
+      const { conto, foto: vuoleFoto } = scelta;
       let photo;
       try {
         photo = await Camera.getPhoto({
@@ -1620,7 +1673,7 @@ dialog.dlg-foto { width: min(560px, calc(100% - 16px)); max-height: calc(100% - 
       };
       // Foto da conservare: rimpicciolita, per non riempire il telefono
       let fotoB64 = null;
-      if (conFoto) { try { fotoB64 = await comprimiFoto(photo.base64String, photo.format); } catch (e) { fotoB64 = null; } }
+      if (vuoleFoto) { try { fotoB64 = await comprimiFoto(photo.base64String, photo.format); } catch (e) {} }
       if (!p.prezzoCent || !p.sicuro || !p.esercente) {
         fillForm(voce);
         if (fotoB64) { fotoInAttesa = fotoB64; $("formFoto").hidden = false; }
@@ -1632,18 +1685,18 @@ dialog.dlg-foto { width: min(560px, calc(100% - 16px)); max-height: calc(100% - 
       const foto = fotoB64 ? await salvaFoto(fotoB64) : null;
       const full = { ...voce, offerto: false, creato: Date.now(), daScontrino: true, ...foto ? { foto } : {} };
       const ref = await col.add(full);
-      try { localStorage.setItem("spese.ultimoConto", conto); } catch (e) {}
+      lsSet("spese.ultimoConto", conto);
       freshId = ref.id;
       anchor = parseDate(full.data);
       render();
       const saved = { id: ref.id, ...full };
       const dove = multiConti() ? ` · in «${nomeConto(conto)}»${visibili.has(conto) ? "" : " (conto che non stai guardando)"}` : "";
-      const nf = !conFoto ? "" : foto ? " · foto salvata" : " · foto non salvata";
+      const nf = !vuoleFoto ? "" : foto ? " · foto salvata" : " · foto non salvata";
       scanStatus(`Aggiunta: ${full.esercente} · ${euro(full.prezzoCent)} · ${dayFmt.format(parseDate(full.data))}${p.data ? "" : " (data di oggi)"}${dove}${nf}`, {
         actions: [
           ["Modifica", () => { scanStatus(""); startEdit(saved); }],
           ["Annulla", async () => {
-            try { await col.doc(ref.id).delete(); freshId = null; scanStatus("Spesa annullata."); }
+            try { await col.doc(ref.id).delete(); freshId = null; render(); scanStatus("Spesa annullata."); }
             catch (e) { scanStatus("Annullamento non riuscito. Elimina la voce dall'elenco.", { err: true }); }
           }],
         ],
@@ -1670,30 +1723,32 @@ dialog.dlg-foto { width: min(560px, calc(100% - 16px)); max-height: calc(100% - 
   $("scanBtn").addEventListener("click", scanReceipt);
 
   // ---- Backup: esporta / importa ----
-  function backupMsg(t, err) { const m = $("backupMsg"); m.textContent = t; m.className = "form-msg" + (err ? " err" : ""); }
   const stamp = () => today().replace(/-/g, "");
 
-  async function shareFile(name, content, title) {
-    if (FS && Share) {
-      const w = await FS.writeFile({ path: name, directory: "CACHE", data: content, encoding: "utf8" });
-      await Share.share({ title, files: [w.uri], dialogTitle: title });
-      return true;
-    }
-    return false;
+  // Scrive il file nella cache e lo apre nella condivisione di Android; false fuori dall'app installata.
+  // testo: contenuto in chiaro (utf8); altrimenti è già in base64
+  async function condividi(name, data, title, testo) {
+    if (!(FS && Share)) return false;
+    const w = await FS.writeFile({ path: name, directory: "CACHE", data, ...testo ? { encoding: "utf8" } : {} });
+    await Share.share({ title, files: [w.uri], dialogTitle: title });
+    return true;
+  }
+  // Esegue un'esportazione e ne scrive l'esito con msg; chiudere la condivisione non è un errore
+  async function esporta(msg, fare) {
+    try {
+      const ok = await fare();
+      msg(ok ? "" : "L'esportazione funziona nell'app installata.", !ok);
+    } catch (e) { if (!/cancel/i.test(String(e && e.message))) msg("Esportazione non riuscita.", true); }
   }
 
-  $("exportJson").addEventListener("click", async () => {
-    try {
-      const ok = await shareFile(`registro-spese-${stamp()}.json`, JSON.stringify({ versione: 1, spese: store, conti }, null, 1), "Backup Registro Spese");
-      backupMsg(ok ? "" : "L'esportazione funziona nell'app installata.", !ok);
-    } catch (e) { if (!/cancel/i.test(String(e && e.message))) backupMsg("Esportazione non riuscita.", true); }
-  });
+  $("exportJson").addEventListener("click", () => esporta(backupMsg, () =>
+    condividi(`registro-spese-${stamp()}.json`, JSON.stringify(archivio(), null, 1), "Backup Registro Spese", true)));
 
   // ---- Esportazione Excel (.xlsx) ----
   function buildWorkbook(items, conConto) {
     const X = window.XLSX;
     const EUR = '#,##0.00 "€"';
-    const data = [...items].filter(r => r.data).sort((a, b) => a.data.localeCompare(b.data) || (a.creato || 0) - (b.creato || 0));
+    const data = items.filter(r => r.data).sort(piuVecchie);
     const aoa = [["Data", "Tipologia", "Esercente", "Nota", "Importo", "Offerto", ...(conConto ? ["Conto"] : [])]];
     // Date come numero di serie Excel (indipendente dal fuso orario del telefono)
     const serial = (s) => { const [y, m, d] = s.split("-").map(Number); return (Date.UTC(y, m - 1, d) - Date.UTC(1899, 11, 30)) / 86400000; };
@@ -1701,8 +1756,7 @@ dialog.dlg-foto { width: min(560px, calc(100% - 16px)); max-height: calc(100% - 
     const ws = X.utils.aoa_to_sheet(aoa);
     const last = data.length + 1;
     for (let i = 2; i <= last; i++) { if (ws["A" + i]) ws["A" + i].z = "dd/mm/yyyy"; if (ws["E" + i]) ws["E" + i].z = EUR; }
-    const tot = data.filter(r => !r.offerto).reduce((s, r) => s + (r.prezzoCent || 0), 0) / 100;
-    const off = data.filter(r => r.offerto).reduce((s, r) => s + (r.prezzoCent || 0), 0) / 100;
+    const somma = somme(data), tot = somma.v / 100, off = somma.g / 100;
     X.utils.sheet_add_aoa(ws, [
       ["Totale (escluse offerte)", "", "", "", { t: "n", v: tot, f: `SUMIF(F2:F${last},"No",E2:E${last})`, z: EUR }, ""],
       ["Offerto", "", "", "", { t: "n", v: off, f: `SUMIF(F2:F${last},"Sì",E2:E${last})`, z: EUR }, ""],
@@ -1715,12 +1769,8 @@ dialog.dlg-foto { width: min(560px, calc(100% - 16px)); max-height: calc(100% - 
   async function shareXlsx(name, items, conConto) {
     if (!window.XLSX) throw new Error("xlsx");
     const b64 = buildWorkbook(items, !!conConto);
-    if (!(FS && Share)) return false;
-    const w = await FS.writeFile({ path: name, directory: "CACHE", data: b64 });
-    await Share.share({ title: "Spese (Excel)", files: [w.uri], dialogTitle: "Spese (Excel)" });
-    return true;
+    return condividi(name, b64, "Spese (Excel)");
   }
-  function exMsg(t, err) { const m = $("exMsg"); m.textContent = t; m.className = "ex-msg" + (err ? " err" : ""); }
   const slug = (s) => norm(s).replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
 
   // ---- Finestra "Quali conti esporto?" (solo con più conti) ----
@@ -1728,31 +1778,21 @@ dialog.dlg-foto { width: min(560px, calc(100% - 16px)); max-height: calc(100% - 
   const expDlg = $("expDlg");
   function chiediContiExport(items, pre, sotto) {
     if (!multiConti()) return Promise.resolve(new Set(conti.map(c => c.id)));
-    return new Promise((resolve) => {
-      const conta = new Map(); items.forEach(r => { const k = contoOf(r); conta.set(k, (conta.get(k) || 0) + 1); });
-      const scelti = new Set(conti.filter(c => pre.has(c.id) && conta.get(c.id)).map(c => c.id));
-      if (!scelti.size) conti.forEach(c => { if (conta.get(c.id)) scelti.add(c.id); });
-      $("expSub").textContent = sotto;
-      const aggiorna = () => {
-        const n = items.filter(r => scelti.has(contoOf(r))).length;
-        $("expOk").disabled = !n;
-        $("expMsg").textContent = n ? `Esporto ${spese(n)}.` : "Scegli almeno un conto con delle spese.";
-      };
-      $("expList").replaceChildren(...conti.map(c => {
-        const li = el("li"), lab = el("label"), k = conta.get(c.id) || 0;
-        const cb = el("input"); cb.type = "checkbox"; cb.checked = scelti.has(c.id); cb.disabled = !k;
-        cb.addEventListener("change", () => { if (cb.checked) scelti.add(c.id); else scelti.delete(c.id); aggiorna(); });
-        lab.append(cb, el("span", "nome", c.nome), el("small", null, spese(k)));
-        li.append(lab); return li;
-      }));
-      aggiorna();
-      let ok = false;
-      $("expOk").onclick = () => { ok = true; expDlg.close(); };
-      $("expAnnulla").onclick = () => expDlg.close();
-      expDlg.addEventListener("close", () => resolve(ok ? new Set(scelti) : null), { once: true });
-      expDlg.showModal();
-      $("expOk").focus();
-    });
+    const conta = contaPer(items, contoOf);
+    const scelti = new Set(conti.filter(c => pre.has(c.id) && conta.get(c.id)).map(c => c.id));
+    if (!scelti.size) conti.forEach(c => { if (conta.get(c.id)) scelti.add(c.id); });
+    $("expSub").textContent = sotto;
+    const aggiorna = () => {
+      const n = items.filter(r => scelti.has(contoOf(r))).length;
+      $("expOk").disabled = !n;
+      $("expMsg").textContent = n ? `Esporto ${spese(n)}.` : "Scegli almeno un conto con delle spese.";
+    };
+    $("expList").replaceChildren(...conti.map(c => {
+      const k = conta.get(c.id) || 0;
+      return el("li", null, rigaSpunta(scelti, c.id, !k, [el("span", "nome", c.nome), el("small", null, spese(k))], aggiorna));
+    }));
+    aggiorna();
+    return chiedi(expDlg, "expOk", "expAnnulla", () => new Set(scelti));
   }
   // Nome del file: con un solo conto scelto, il suo nome
   const nomeFile = (scelti, coda) => {
@@ -1762,7 +1802,7 @@ dialog.dlg-foto { width: min(560px, calc(100% - 16px)); max-height: calc(100% - 
   // Spese del periodo (o della ricerca) mostrato, con le categorie nascoste escluse, di tutti i conti
   function righeDelPeriodo() {
     const P = period(), q = norm($("q").value.trim());
-    return rows.filter(r => r.data && !hidden.has(tipoKey(r)) && (q ? matches(r, q) : r.data >= P.start && r.data <= P.end));
+    return rows.filter(r => !hidden.has(tipoKey(r)) && nelFiltro(r, P, q));
   }
 
   $("export").addEventListener("click", async () => {
@@ -1771,10 +1811,7 @@ dialog.dlg-foto { width: min(560px, calc(100% - 16px)); max-height: calc(100% - 
     exMsg("");
     const scelti = await chiediContiExport(cand, visibili, lastLabel === "ricerca" ? "Spese della ricerca attuale." : `Spese di: ${lastLabel}.`);
     if (!scelti) return;
-    try {
-      const ok = await shareXlsx(nomeFile(scelti, slug(lastLabel)), cand.filter(r => scelti.has(contoOf(r))), scelti.size > 1);
-      exMsg(ok ? "" : "L'esportazione funziona nell'app installata.", !ok);
-    } catch (e) { if (!/cancel/i.test(String(e && e.message))) exMsg("Esportazione non riuscita.", true); }
+    await esporta(exMsg, () => shareXlsx(nomeFile(scelti, slug(lastLabel)), cand.filter(r => scelti.has(contoOf(r))), scelti.size > 1));
   });
 
   $("exportCsv").addEventListener("click", async () => {
@@ -1782,10 +1819,7 @@ dialog.dlg-foto { width: min(560px, calc(100% - 16px)); max-height: calc(100% - 
     if (!store.length) { backupMsg("Non ci sono spese da esportare."); return; }
     const scelti = await chiediContiExport(store, new Set(conti.map(c => c.id)), "Tutte le spese, di ogni data.");
     if (!scelti) return;
-    try {
-      const ok = await shareXlsx(nomeFile(scelti, stamp()), store.filter(r => scelti.has(contoOf(r))), scelti.size > 1);
-      backupMsg(ok ? "" : "L'esportazione funziona nell'app installata.", !ok);
-    } catch (e) { if (!/cancel/i.test(String(e && e.message))) backupMsg("Esportazione non riuscita.", true); }
+    await esporta(backupMsg, () => shareXlsx(nomeFile(scelti, stamp()), store.filter(r => scelti.has(contoOf(r))), scelti.size > 1));
   });
 
   $("importFile").addEventListener("change", async (ev) => {
@@ -1796,58 +1830,58 @@ dialog.dlg-foto { width: min(560px, calc(100% - 16px)); max-height: calc(100% - 
       const obj = JSON.parse(await file.text());
       const list = Array.isArray(obj) ? obj : obj.spese;
       if (!Array.isArray(list)) throw new Error("formato");
-      // Conti del backup: quelli con lo stesso nome si uniscono a quelli già presenti
-      const mappa = new Map([[CONTO_BASE, baseId()]]);
-      let nuoviConti = 0;
-      (Array.isArray(obj.conti) ? obj.conti : []).forEach(c => {
-        if (!c || !c.id || !String(c.nome || "").trim()) return;
-        const id = String(c.id), nome = String(c.nome).trim().slice(0, 30);
-        const uguale = conti.find(x => x.id === id) || conti.find(x => keyOf(x.nome) === keyOf(nome));
-        if (uguale) { mappa.set(id, uguale.id); return; }
-        conti.push(leggiConto({ id, nome, foto: c.foto }, false)); visibili.add(id); mappa.set(id, id); nuoviConti++;
+      let added = 0, nuoviConti = 0;
+      await modifica(() => {
+        // Conti del backup: quelli con lo stesso nome si uniscono a quelli già presenti
+        const elenco = [...conti], aggiunti = [];
+        // i conti nuovi vanno in fondo: il conto di riserva (baseId) non cambia
+        const mappa = new Map([[CONTO_BASE, baseId()]]);
+        added = 0; nuoviConti = 0;
+        (Array.isArray(obj.conti) ? obj.conti : []).forEach(c => {
+          if (!c || !c.id || !String(c.nome || "").trim()) return;
+          const id = String(c.id), nome = String(c.nome).trim().slice(0, 30);
+          const uguale = elenco.find(x => x.id === id) || elenco.find(x => keyOf(x.nome) === keyOf(nome));
+          if (uguale) { mappa.set(id, uguale.id); return; }
+          elenco.push(leggiConto({ id, nome, foto: c.foto }, false)); aggiunti.push(id); mappa.set(id, id); nuoviConti++;
+        });
+        const nuovo = [...store];
+        const have = new Set(store.map(r => r.id));
+        list.forEach(r => {
+          if (!r || !r.data || !Number.isFinite(Number(r.prezzoCent))) return;
+          if (r.id && have.has(r.id)) return; // già presente
+          const id = r.id ? String(r.id) : newId();
+          nuovo.push({ id, tipologia: String(r.tipologia || "Altro"), esercente: String(r.esercente || ""), prezzoCent: Number(r.prezzoCent), data: String(r.data), offerto: !!r.offerto, nota: String(r.nota || "").slice(0, 20), conto: mappa.get(String(r.conto || CONTO_BASE)) || baseId(), creato: Number(r.creato) || Date.now() });
+          have.add(id); added++;
+        });
+        return { store: nuovo, conti: elenco, visibili: aggiunti.length ? (vis) => aggiunti.forEach(id => vis.add(id)) : null };
       });
-      if (nuoviConti) saveVisibili();
-      const have = new Set(store.map(r => r.id));
-      let added = 0;
-      list.forEach(r => {
-        if (!r || !r.data || !Number.isFinite(Number(r.prezzoCent))) return;
-        if (r.id && have.has(r.id)) return; // già presente
-        const id = r.id ? String(r.id) : newId();
-        store.push({ id, tipologia: String(r.tipologia || "Altro"), esercente: String(r.esercente || ""), prezzoCent: Number(r.prezzoCent), data: String(r.data), offerto: !!r.offerto, nota: String(r.nota || "").slice(0, 20), conto: mappa.get(String(r.conto || CONTO_BASE)) || baseId(), creato: Number(r.creato) || Date.now() });
-        have.add(id); added++;
-      });
-      await persist(); emit();
+      render();
       backupMsg((added ? `Importate ${added} spese.` : "Nessuna spesa nuova da importare.") + (nuoviConti ? (nuoviConti === 1 ? " Aggiunto 1 conto." : ` Aggiunti ${nuoviConti} conti.`) : ""));
     } catch (e) { backupMsg("File non valido: scegli un backup esportato da Registro Spese.", true); }
   });
 
   $("f-data").value = today();
   render();
-  $("list").querySelector(".empty").innerHTML = "<strong>Caricamento…</strong>Le tue spese compariranno qui.";
 
   (async () => {
-    let saved = await readStore();
-    if (!saved) {
-      // Primo avvio: si parte con l'elenco vuoto
-      store = (saved && Array.isArray(saved.spese)) ? saved.spese : [];
-      try { await persist(); } catch (e) {}
-    } else {
-      store = Array.isArray(saved.spese) ? saved.spese : [];
-      const salvati = Array.isArray(saved.conti) ? saved.conti.filter(c => c && c.id && String(c.nome || "").trim()) : [];
-      if (salvati.length) conti = salvati.map(c => leggiConto(c, fotoDiPrima()));
-      // conti di prima senza preferenza: la si salva subito (dalla vecchia impostazione)
-      if (!salvati.length || salvati.some(c => typeof c.foto !== "boolean")) { try { await persist(); } catch (e) {} }
-    }
+    // Primo avvio (nessun archivio): si parte con l'elenco vuoto
+    const saved = await readStore();
+    store = saved && Array.isArray(saved.spese) ? saved.spese : [];
+    const salvati = saved && Array.isArray(saved.conti) ? saved.conti.filter(c => c && c.id && String(c.nome || "").trim()) : [];
+    if (salvati.length) conti = salvati.map(c => leggiConto(c, fotoDiPrima()));
+    // Primo avvio, o conti di prima senza preferenza (presa dalla vecchia impostazione): si salva subito
+    if (!salvati.length || salvati.some(c => typeof c.foto !== "boolean")) { try { await modifica(() => ({})); } catch (e) {} }
     pulisciVisibili(); saveVisibili();
     $("f-conto").value = contoPredefinito();
     col = localCol;
     $("scanBtn").hidden = !(Camera && OCR);
+    // Ad ogni scrittura si aggiornano rows e la grafia; ridisegna chi ha scritto
     col.onSnapshot((snap) => {
       rows = snap.docs.map(d => ({ id: d.id, ...d.data() }));
       buildCanon();
-      render();
-      segnaAvvioRiuscito();
     });
+    render();
+    segnaAvvioRiuscito();
   })();
 
   // ---- Aggiornamento automatico dell'interfaccia ----
@@ -1859,16 +1893,12 @@ dialog.dlg-foto { width: min(560px, calc(100% - 16px)); max-height: calc(100% - 
   const UPD_DIR = "interfaccia";
   const WV = isNative ? plugin("WebView") : null;
   const numVer = (v) => { const m = String(v || "").match(/(\d+)\.(\d+)\.(\d+)/); return m ? (+m[1]) * 1e8 + (+m[2]) * 1e4 + (+m[3]) : 0; };
-  const lsGet = (k) => { try { return localStorage.getItem(k); } catch (e) { return null; } };
-  const lsSet = (k, v) => { try { if (v == null) localStorage.removeItem(k); else localStorage.setItem(k, v); } catch (e) {} };
   const versioneLocale = () => fetch("versione.json").then(r => r.ok ? r.json() : null).then(v => (v && v.versione) || "").catch(() => "");
 
   // L'interfaccia è partita bene: la versione in prova diventa definitiva
-  let avvioSegnato = false;
   function segnaAvvioRiuscito() {
     if (lsGet("upd.prova")) { lsSet("upd.prova", null); lsSet("upd.avvii", null); }
-    if (avvioSegnato || !WV) return;
-    avvioSegnato = true;
+    if (!WV) return;
     // Ad ogni avvio riuscito da un'interfaccia scaricata, la si salva di nuovo come "da usare al prossimo avvio"
     // e la si annota: se Android dovesse comunque ripartire dall'APK, l'app ci ritorna da sola.
     (async () => {
@@ -2097,21 +2127,23 @@ dialog.dlg-foto { width: min(560px, calc(100% - 16px)); max-height: calc(100% - 
     const nessuna = !store.some(r => r.foto);
     $("fotoEsporta").disabled = $("fotoEliminaSel").disabled = nessuna;
   }
-  function fotoMsg(t, err) { const m = $("fotoMsg"); m.textContent = t; m.className = "form-msg" + (err ? " err" : ""); }
 
   // ---- Esporta / elimina foto: prima i conti (se più di uno), poi i mesi ----
   // L'esportazione crea un unico file .zip (le foto così come sono) e lo apre nella condivisione di Android.
   const gfDlg = $("gfDlg");
-  const gf = { modo: "esporta", passo: "conti", conti: new Set(), mesi: new Set(), conferma: false, busy: false, dim: new Map() };
+  // msg: esito dell'ultima operazione, mostrato sotto la lista finché non cambia la scelta, il passo o si riapre;
+  // etichetta: testo del pulsante mentre si lavora (busy)
+  const gf = { modo: "esporta", passo: "conti", conti: new Set(), mesi: new Set(), conferma: false, busy: false, dim: new Map(), msg: "", etichetta: "" };
   const conFoto = () => store.filter(r => r.foto && r.data);
   const meseDi = (r) => r.data.slice(0, 7);
   const fotoN = (n) => n === 1 ? "1 foto" : `${n} foto`;
-  const fotoScelte = () => conFoto().filter(r => gf.conti.has(contoOf(r)) && gf.mesi.has(meseDi(r)));
+  const fotoDeiConti = () => conFoto().filter(r => gf.conti.has(contoOf(r)));
+  const fotoScelte = () => fotoDeiConti().filter(r => gf.mesi.has(meseDi(r)));
 
   async function apriGestioneFoto(modo) {
     if (gf.busy) return;
     fotoMsg("");
-    gf.modo = modo; gf.conferma = false;
+    gf.modo = modo; gf.conferma = false; gf.msg = "";
     gf.dim = ((await spazioFoto()) || {}).dim || new Map();
     const tutte = conFoto();
     if (!tutte.length) { fotoMsg("Non ci sono foto salvate."); return; }
@@ -2124,37 +2156,34 @@ dialog.dlg-foto { width: min(560px, calc(100% - 16px)); max-height: calc(100% - 
     gfDlg.showModal();
   }
   function vaiAiMesi() {
-    gf.passo = "mesi"; gf.conferma = false;
+    gf.passo = "mesi"; gf.conferma = false; gf.msg = "";
     // Esporta: tutti i mesi spuntati; elimina: nessuno, si sceglie cosa cancellare
-    gf.mesi = gf.modo === "esporta" ? new Set(conFoto().filter(r => gf.conti.has(contoOf(r))).map(meseDi)) : new Set();
+    gf.mesi = gf.modo === "esporta" ? new Set(fotoDeiConti().map(meseDi)) : new Set();
   }
 
   function renderGf() {
     const ul = $("gfList"), mesi = gf.passo === "mesi", piu = multiConti();
     const elimina = gf.modo === "elimina";
     $("gfSub").textContent = mesi ? (piu ? "2 · Scegli i mesi" : "Scegli i mesi") : "1 · Scegli i conti";
+    const deiConti = fotoDeiConti();
     let voci;
     if (!mesi) {
-      const conta = new Map(); conFoto().forEach(r => { const k = contoOf(r); conta.set(k, (conta.get(k) || 0) + 1); });
+      const conta = contaPer(conFoto(), contoOf);
       voci = conti.map(c => ({ id: c.id, nome: c.nome, n: conta.get(c.id) || 0, set: gf.conti }));
     } else {
-      const conta = new Map(); conFoto().filter(r => gf.conti.has(contoOf(r))).forEach(r => { const k = meseDi(r); conta.set(k, (conta.get(k) || 0) + 1); });
+      const conta = contaPer(deiConti, meseDi);
       voci = [...conta.keys()].sort().reverse().map(k => ({ id: k, nome: monthFmt.format(parseDate(k + "-01")), n: conta.get(k), set: gf.mesi }));
     }
     const attive = voci.filter(v => v.n);
     const tutteSpuntate = attive.length && attive.every(v => v.set.has(v.id));
     $("gfTutti").textContent = tutteSpuntate ? "Togli tutti" : "Seleziona tutti";
-    $("gfTutti").onclick = () => { attive.forEach(v => tutteSpuntate ? v.set.delete(v.id) : v.set.add(v.id)); gf.conferma = false; renderGf(); };
+    $("gfTutti").onclick = () => { attive.forEach(v => tutteSpuntate ? v.set.delete(v.id) : v.set.add(v.id)); gf.conferma = false; gf.msg = ""; renderGf(); };
     ul.replaceChildren(...voci.map(v => {
-      const li = el("li"), lab = el("label");
-      const cb = el("input"); cb.type = "checkbox"; cb.checked = v.set.has(v.id); cb.disabled = !v.n || gf.busy;
-      cb.addEventListener("change", () => { if (cb.checked) v.set.add(v.id); else v.set.delete(v.id); gf.conferma = false; renderGf(); });
       const nome = el("span", "nome", v.nome); nome.style.textTransform = mesi ? "capitalize" : "";
-      lab.append(cb, nome, el("small", null, fotoN(v.n)));
-      li.append(lab); return li;
+      return el("li", null, rigaSpunta(v.set, v.id, !v.n || gf.busy, [nome, el("small", null, fotoN(v.n))], () => { gf.conferma = false; gf.msg = ""; renderGf(); }));
     }));
     $("gfDopoBox").hidden = !mesi || elimina;
-    const scelte = mesi ? fotoScelte() : conFoto().filter(r => gf.conti.has(contoOf(r)));
+    const scelte = mesi ? deiConti.filter(r => gf.mesi.has(meseDi(r))) : deiConti;
     const byte = scelte.reduce((s, r) => s + (gf.dim.get(r.foto) || 0), 0);
     $("gfConta").textContent = scelte.length ? `${fotoN(scelte.length)}${byte ? " · " + mb(byte) : ""}` : "Nessuna foto scelta";
     $("gfIndietro").textContent = mesi && piu ? "Indietro" : "Annulla";
@@ -2162,11 +2191,11 @@ dialog.dlg-foto { width: min(560px, calc(100% - 16px)); max-height: calc(100% - 
     const ok = $("gfOk");
     ok.className = elimina && mesi ? "danger-btn" : "primary";
     ok.disabled = gf.busy || !scelte.length;
-    if (!gf.busy) ok.textContent = !mesi ? "Avanti" : !elimina ? `Esporta ${fotoN(scelte.length)}` : gf.conferma ? `Conferma: elimina ${fotoN(scelte.length)}` : `Elimina ${fotoN(scelte.length)}`;
-    if (!gf.busy) $("gfMsg").textContent = elimina && mesi && gf.conferma ? "Le foto vengono cancellate dal telefono. Le spese restano." : "";
+    ok.textContent = gf.busy ? gf.etichetta : !mesi ? "Avanti" : !elimina ? `Esporta ${fotoN(scelte.length)}` : gf.conferma ? `Conferma: elimina ${fotoN(scelte.length)}` : `Elimina ${fotoN(scelte.length)}`;
+    $("gfMsg").textContent = gf.msg || (elimina && mesi && gf.conferma ? "Le foto vengono cancellate dal telefono. Le spese restano." : "");
   }
   $("gfIndietro").addEventListener("click", () => {
-    if (gf.passo === "mesi" && multiConti()) { gf.passo = "conti"; gf.conferma = false; renderGf(); }
+    if (gf.passo === "mesi" && multiConti()) { gf.passo = "conti"; gf.conferma = false; gf.msg = ""; renderGf(); }
     else gfDlg.close();
   });
   gfDlg.addEventListener("cancel", (e) => { if (gf.busy) e.preventDefault(); });
@@ -2176,27 +2205,29 @@ dialog.dlg-foto { width: min(560px, calc(100% - 16px)); max-height: calc(100% - 
     if (gf.passo === "conti") { vaiAiMesi(); renderGf(); return; }
     const scelte = fotoScelte();
     if (!scelte.length) return;
+    // un nuovo tentativo toglie l'esito di quello prima
+    const lavora = (etichetta) => { gf.busy = true; gf.msg = ""; gf.etichetta = etichetta; renderGf(); };
     if (gf.modo === "elimina") {
       if (!gf.conferma) { gf.conferma = true; renderGf(); return; }
-      gf.busy = true; renderGf(); $("gfOk").textContent = "Elimino…";
+      lavora("Elimino…");
       try { await togliFoto(scelte); gfDlg.close(); fotoMsg(`Eliminate ${fotoN(scelte.length)}. Le spese restano.`); }
-      catch (e) { $("gfMsg").textContent = "Eliminazione non riuscita. Riprova."; }
+      catch (e) { gf.msg = "Eliminazione non riuscita. Riprova."; }
       finally { gf.busy = false; if (gfDlg.open) renderGf(); }
       return;
     }
-    gf.busy = true; renderGf();
+    lavora($("gfOk").textContent);
     const dopo = $("gfDopo").checked;
     try {
-      const r = await esportaFoto(scelte, (i, n) => { $("gfOk").textContent = `Preparo ${i}/${n}…`; });
-      if (!r) { $("gfMsg").textContent = "L'esportazione funziona nell'app installata."; return; }
-      if (!r.inclusi.length) { $("gfMsg").textContent = "Nessuna foto trovata sul telefono."; return; }
+      const r = await esportaFoto(scelte, (i, n) => { gf.etichetta = `Preparo ${i}/${n}…`; $("gfOk").textContent = gf.etichetta; });
+      if (!r) { gf.msg = "L'esportazione funziona nell'app installata."; return; }
+      if (!r.inclusi.length) { gf.msg = "Nessuna foto trovata sul telefono."; return; }
       let t = `Esportate ${fotoN(r.inclusi.length)}.`;
       if (r.mancanti) t += ` ${fotoN(r.mancanti)} non trovate sul telefono.`;
       if (dopo) { await togliFoto(r.inclusi); t += " Foto eliminate dal telefono."; }
       gf.busy = false; gfDlg.close(); fotoMsg(t);
     } catch (e) {
       const annullata = /cancel/i.test(String(e && e.message));
-      $("gfMsg").textContent = annullata ? "Esportazione annullata" + (dopo ? ": nessuna foto eliminata." : ".") : "Esportazione non riuscita.";
+      gf.msg = annullata ? "Esportazione annullata" + (dopo ? ": nessuna foto eliminata." : ".") : "Esportazione non riuscita.";
     } finally { gf.busy = false; if (gfDlg.open) renderGf(); }
   });
   $("fotoEsporta").addEventListener("click", () => apriGestioneFoto("esporta"));
@@ -2204,11 +2235,13 @@ dialog.dlg-foto { width: min(560px, calc(100% - 16px)); max-height: calc(100% - 
 
   // Toglie le foto dalle spese (un solo salvataggio), poi cancella i file
   async function togliFoto(lista) {
-    const ids = new Set(lista.map(r => r.id)), file = [];
-    const prima = store;
-    store = store.map(r => { if (!ids.has(r.id) || !r.foto) return r; file.push(r.foto); const { foto, ...resto } = r; return resto; });
-    try { await persist(); } catch (e) { store = prima; throw e; }
-    emit();
+    const ids = new Set(lista.map(r => r.id));
+    let file = [];
+    await modifica(() => {
+      file = [];
+      return { store: store.map(r => { if (!ids.has(r.id) || !r.foto) return r; file.push(r.foto); const { foto, ...resto } = r; return resto; }) };
+    });
+    render();
     for (const f of file) await cancellaFoto(f);
   }
 
@@ -2278,11 +2311,6 @@ dialog.dlg-foto { width: min(560px, calc(100% - 16px)); max-height: calc(100% - 
     await Share.share({ title: "Foto degli scontrini", files: [uri], dialogTitle: "Salva le foto degli scontrini" });
     return { inclusi, mancanti };
   }
-  function aggEsito(nodi, err) {
-    const box = $("aggEsito");
-    box.className = "agg-esito" + (err ? " err" : "");
-    box.replaceChildren(...[].concat(nodi || []));
-  }
   $("impBtn").addEventListener("click", () => {
     backupMsg(""); fotoMsg(""); aggEsito(null);
     aggiornaSpazioFoto();
@@ -2316,9 +2344,7 @@ dialog.dlg-foto { width: min(560px, calc(100% - 16px)); max-height: calc(100% - 
   });
 
   // Versione installata (scritta da GitHub durante la compilazione)
-  fetch("versione.json").then(r => r.ok ? r.json() : null).then(v => {
-    if (v && v.versione) $("versione").textContent = "Versione installata: " + v.versione;
-  }).catch(() => {});
+  versioneLocale().then(v => { if (v) $("versione").textContent = "Versione installata: " + v; });
 })();
 </script>
 </body>
