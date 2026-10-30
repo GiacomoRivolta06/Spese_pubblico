@@ -276,6 +276,7 @@ dialog.dlg::backdrop { background: rgba(10, 20, 25, .45); }
 .scelta-conti { position: relative; list-style: none; margin: 0; padding: 0; border: 1px solid var(--line); border-radius: 10px; overflow-y: auto; overscroll-behavior: contain; -webkit-overflow-scrolling: touch; }
 .scelta-conti label { display: flex; align-items: center; gap: 12px; padding: 12px 14px; cursor: pointer; user-select: none; }
 .scelta-conti li:has(input:checked) { background: var(--accent-soft); }
+.scelta-conti label:has(input:disabled) { opacity: .5; cursor: default; }
 .scelta-nota { margin: -6px 0 0; color: var(--muted); font-size: .8rem; }
 
 /* Casella "salva la foto" sotto la scelta del conto */
@@ -313,6 +314,26 @@ dialog.dlg-foto { width: min(560px, calc(100% - 16px)); max-height: calc(100% - 
 .gf-testa .link { font-size: .82rem; }
 #gfOk.danger-btn { padding: 10px 16px; }
 #gfDopoBox span { font-weight: 500; font-size: .9rem; }
+
+/* Selezione multipla: pressione lunga su una riga, poi barra fissa in basso con le azioni.
+   Sulle righe niente selezione del testo né menu di sistema, che la pressione lunga farebbe comparire */
+.row { -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
+.row.in-sel { cursor: pointer; }
+.row.scelta { background: var(--accent-soft); box-shadow: inset 3px 0 0 var(--accent); }
+.sel-segno { width: 22px; height: 22px; margin: 0 4px; border-radius: 50%; border: 2px solid var(--line); display: grid; place-items: center; font-size: .78rem; font-weight: 700; color: var(--accent-ink); }
+.row.scelta .sel-segno { background: var(--accent); border-color: var(--accent); }
+.sel-bar { position: fixed; z-index: 30; max-width: 560px; margin: 0 auto;
+  left: max(16px, env(safe-area-inset-left, 0px)); right: max(16px, env(safe-area-inset-right, 0px)); bottom: max(12px, env(safe-area-inset-bottom, 0px));
+  display: flex; flex-direction: column; gap: 8px; padding: 8px 8px 10px 12px; background: var(--paper); border: 1px solid var(--accent); border-radius: 12px; box-shadow: 0 8px 28px rgba(0,0,0,.22); }
+.sel-testa { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.sel-info { flex: 1; min-width: 0; font-weight: 600; font-size: .9rem; }
+.sel-info.err { color: var(--danger); }
+.sel-azioni { display: flex; flex-wrap: wrap; gap: 6px; padding-right: 2px; }
+.sel-azioni button { flex: 1 1 auto; padding: 8px 10px; font-size: .86rem; font-weight: 600; }
+.sel-azioni button:disabled, .sel-bar .chiudi:disabled { opacity: .5; cursor: default; }
+.sel-azioni .sel-elimina { color: var(--danger); border-color: var(--danger); }
+/* margine in fondo pari all'altezza vera della barra (--sel-h, la misura aggiornaBarraSel), così l'ultima riga non resta coperta */
+body:has(.sel-bar:not([hidden])) { padding-bottom: calc(var(--sel-h, 0px) + 24px + env(safe-area-inset-bottom, 0px)); }
 
 .empty { background: var(--paper); border: 1px dashed var(--line); border-radius: 10px; padding: 24px 18px; text-align: center; color: var(--muted); }
 .empty strong { display: block; color: var(--ink); font-family: var(--f-display); font-size: 1.05rem; margin-bottom: 4px; }
@@ -441,6 +462,19 @@ dialog.dlg-foto { width: min(560px, calc(100% - 16px)); max-height: calc(100% - 
   <p class="note" id="note"></p>
 </div>
 
+<div class="sel-bar" id="selBar" role="region" aria-label="Spese selezionate" hidden>
+  <div class="sel-testa">
+    <span class="sel-info" id="selInfo" role="status"></span>
+    <button type="button" class="chiudi" id="selChiudi" aria-label="Esci dalla selezione"><svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></button>
+  </div>
+  <div class="sel-azioni" id="selAzioni">
+    <button type="button" class="ghost" id="selTutte">Seleziona tutte</button>
+    <button type="button" class="ghost" id="selConto">Conto</button>
+    <button type="button" class="ghost" id="selOfferto">Offerto</button>
+    <button type="button" class="ghost sel-elimina" id="selElimina">Elimina</button>
+  </div>
+</div>
+
 <dialog class="dlg dlg-imp" id="impDlg" aria-labelledby="impTitle">
   <div class="dlg-body">
     <div class="dlg-head">
@@ -552,6 +586,24 @@ dialog.dlg-foto { width: min(560px, calc(100% - 16px)); max-height: calc(100% - 
       <span>Salva la foto dello scontrino</span>
     </label>
     <div class="dlg-actions"><button type="button" class="ghost" id="scanDlgAnnulla">Annulla</button><button type="button" class="primary" id="scanFatto">Fatto</button></div>
+  </div>
+</dialog>
+
+<dialog class="dlg" id="selContoDlg" aria-labelledby="selContoTitle">
+  <div class="dlg-body">
+    <h2 id="selContoTitle">Sposta nel conto:</h2>
+    <ul class="scelta-conti" id="selConti" role="radiogroup" aria-labelledby="selContoTitle"></ul>
+    <p class="scelta-nota" id="selContiNota" hidden></p>
+    <div class="dlg-actions"><button type="button" class="ghost" id="selContoAnnulla">Annulla</button><button type="button" class="primary" id="selContoOk">Sposta</button></div>
+  </div>
+</dialog>
+
+<dialog class="dlg" id="selElimDlg" aria-labelledby="selElimTitle">
+  <div class="dlg-body">
+    <h2 id="selElimTitle">Eliminare le spese?</h2>
+    <p class="dlg-sub" id="selElimSomma"></p>
+    <p class="dlg-sub" id="selElimFoto" hidden></p>
+    <div class="dlg-actions"><button type="button" class="ghost" id="selElimAnnulla">Annulla</button><button type="button" class="danger-btn" id="selElimOk">Elimina</button></div>
   </div>
 </dialog>
 
@@ -674,6 +726,11 @@ dialog.dlg-foto { width: min(560px, calc(100% - 16px)); max-height: calc(100% - 
   let col = null;         // collection ref
   let editingId = null;
   let pendingDelete = null;
+  // Selezione multipla (non si salva): id delle spese scelte; vuota = fuori dalla selezione.
+  // selBusy: salvataggio in corso; selEsito: { t, err } mostrato nella barra al posto del riepilogo
+  const selezione = new Set();
+  let selBusy = false, selEsito = null, selTimer = null;
+  let idsMostrati = [];   // spese nell'elenco in questo momento (per "Seleziona tutte")
   let freshId = null;     // ultima spesa inserita da scontrino
   let tipiSugg = [];      // suggerimenti per la tipologia
   let fotoInAttesa = null; // foto (base64) di uno scontrino da salvare quando si preme Aggiungi
@@ -810,6 +867,10 @@ dialog.dlg-foto { width: min(560px, calc(100% - 16px)); max-height: calc(100% - 
     aggiornaConti();
     const all = rows.filter(r => visibili.has(contoOf(r)) && nelFiltro(r, P, q)).sort(piuRecenti);
     const inMonth = all.filter(r => !hidden.has(tipoKey(r)));
+    // restano selezionate solo le spese ancora nell'elenco; se non ne resta nessuna si esce dalla selezione
+    idsMostrati = inMonth.map(r => r.id);
+    const mostrati = new Set(idsMostrati);
+    [...selezione].forEach(id => { if (!mostrati.has(id)) selezione.delete(id); });
     const filtered = inMonth.length !== all.length;
     $("totLabel").textContent = (searching ? "Totale dei risultati" : P.tot) + (filtered ? " · filtrato" : "");
     lastLabel = searching ? "ricerca" : P.label;
@@ -926,6 +987,8 @@ dialog.dlg-foto { width: min(560px, calc(100% - 16px)); max-height: calc(100% - 
     tipiSugg = uniqByKey([...canon.tipologia.values(), ...DEFAULT_TIPI]);
     fillDatalist("dl-eserc", [...canon.esercente.values()]);
     renderQuick();
+    aggiornaBarraSel();
+    aggiornaIndietro();
   }
 
   // ---- Aggiunta rapida: esercenti più frequenti, compila tutto tranne il prezzo ----
@@ -1000,7 +1063,10 @@ dialog.dlg-foto { width: min(560px, calc(100% - 16px)); max-height: calc(100% - 
   });
 
   const ICONA_SCONTRINO = '<svg viewBox="0 0 24 24" width="13" height="13" aria-hidden="true"><path d="M6 3h12v18l-3-2-3 2-3-2-3 2z M9 8h6M9 12h6" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/></svg>';
-  // conConto: si mostra il nome del conto sopra l'esercente (più conti visibili)
+  // Riga dell'elenco -> id della spesa (per i tocchi sull'elenco, senza aggiungere attributi alle righe)
+  const idDiRiga = new WeakMap();
+  // conConto: si mostra il nome del conto sopra l'esercente (più conti visibili).
+  // Durante la selezione al posto di Modifica/Elimina c'è il segno di spunta
   function rowEl(r, conConto) {
     const t = tipoKey(r);
     const tags = el("div", "tags");
@@ -1017,11 +1083,21 @@ dialog.dlg-foto { width: min(560px, calc(100% - 16px)); max-height: calc(100% - 
       el("div", "merchant", r.esercente || "—"),
       r.nota ? el("div", "nota", r.nota) : null,
       tags);
-    const confirming = pendingDelete === r.id;
-    const act = el("div", "row-actions",
-      btn(null, "Modifica", () => startEdit(r)),
-      btn(confirming ? "confirm" : null, confirming ? "Conferma" : "Elimina", () => onDelete(r)));
-    return el("li", "row" + (r.id === editingId ? " editing" : r.id === freshId ? " fresh" : ""), who, el("div", "amt", euro(r.prezzoCent)), act);
+    const inSel = selezione.size > 0, scelta = selezione.has(r.id);
+    let lato;
+    if (inSel) lato = el("span", { className: "sel-segno", role: "img", "aria-label": scelta ? "Selezionata" : "Non selezionata" }, scelta ? "✓" : "");
+    else {
+      const confirming = pendingDelete === r.id;
+      lato = el("div", "row-actions",
+        btn(null, "Modifica", () => startEdit(r)),
+        btn(confirming ? "confirm" : null, confirming ? "Conferma" : "Elimina", () => onDelete(r)));
+    }
+    let classi = "row";
+    if (r.id === editingId) classi += " editing"; else if (r.id === freshId) classi += " fresh";
+    if (inSel) classi += scelta ? " in-sel scelta" : " in-sel";
+    const li = el("li", classi, who, el("div", "amt", euro(r.prezzoCent)), lato);
+    idDiRiga.set(li, r.id);
+    return li;
   }
 
   function startEdit(r) {
@@ -1149,6 +1225,8 @@ dialog.dlg-foto { width: min(560px, calc(100% - 16px)); max-height: calc(100% - 
   const PENCIL = '<svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M4 20h4L19 9a2.1 2.1 0 0 0-3-3L5 17z M14.5 7.5l3 3" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></svg>';
   const CAMERA = '<svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M4 8h3l2-2.5h6L17 8h3v11H4z" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linejoin="round"/><circle cx="12" cy="13" r="3.2" fill="none" stroke="currentColor" stroke-width="1.9"/></svg>';
   const spese = (n) => n === 1 ? "1 spesa" : `${n} spese`;
+  // "1 spesa spostata", "3 spese spostate"
+  const speseVerbo = (n, uno, piu) => `${spese(n)} ${n === 1 ? uno : piu}`;
   // Riga di una lista con spunta: <label><casella>…</label>, spuntata se l'id è nell'insieme.
   // Toccarla aggiunge o toglie l'id dall'insieme, poi chiama dopo()
   function rigaSpunta(insieme, id, disabled, contenuto, dopo) {
@@ -1297,7 +1375,7 @@ dialog.dlg-foto { width: min(560px, calc(100% - 16px)); max-height: calc(100% - 
   $("addConto").addEventListener("click", aggiungiConto);
   $("nuovoConto").addEventListener("keydown", (e) => { if (e.key === "Enter") { e.preventDefault(); aggiungiConto(); } });
   // tocco fuori dalla finestra: chiude
-  [contiDlg, $("scanDlg"), $("impDlg"), $("expDlg"), $("fotoDlg"), $("gfDlg")].forEach(d => d.addEventListener("click", (e) => { if (e.target === d) d.close(); }));
+  [contiDlg, $("scanDlg"), $("impDlg"), $("expDlg"), $("fotoDlg"), $("gfDlg"), $("selContoDlg"), $("selElimDlg")].forEach(d => d.addEventListener("click", (e) => { if (e.target === d) d.close(); }));
 
   // ---- Finestra prima della foto: (con più conti) la scelta del conto in un riquadro, sotto la casella "salva la foto" ----
   // Toccare un conto lo seleziona soltanto: si conferma con "Fatto", così un tocco sbagliato non salva nulla.
@@ -1317,36 +1395,43 @@ dialog.dlg-foto { width: min(560px, calc(100% - 16px)); max-height: calc(100% - 
     });
   }
 
+  // Elenco dei conti a scelta singola in un riquadro (scontrino, "Sposta nel conto"): prima quelli che si stanno guardando,
+  // al massimo 5 visibili, poi si scorre. gruppo: name dei radio; contoScelto: conto già selezionato (o null);
+  // disattivo(c): conto che non si può scegliere. Risponde con le misure da prendere a finestra aperta
   const CONTI_VISIBILI = 5;
-  function chiediConto() {
-    const box = $("scanConti"), nota = $("scanContiNota"), casella = $("scanFoto");
-    let toccata = false;
-    const piu = multiConti();
-    const fotoDelConto = (id) => !!(conti.find(c => c.id === id) || {}).foto;
-    casella.onchange = () => { toccata = true; };
-    box.onchange = (e) => { if (!toccata && e.target.name === "scanConto") casella.checked = fotoDelConto(e.target.value); };
-    $("scanDlgTitle").hidden = box.hidden = !piu;
+  function sceltaConti(box, nota, gruppo, contoScelto, disattivo) {
     const ordine = [...conti].sort((a, b) => (visibili.has(b.id) - visibili.has(a.id)));
-    // il conto proposto esiste sempre (con un solo conto è proprio quello)
-    const pred = contoPredefinito();
     box.replaceChildren(...ordine.map(c => el("li", null, el("label", null,
-      el("input", { type: "radio", name: "scanConto", value: c.id, checked: c.id === pred }),
+      el("input", { type: "radio", name: gruppo, value: c.id, checked: c.id === contoScelto, disabled: disattivo && disattivo(c) }),
       el("span", "nome", c.nome)))));
-    casella.checked = fotoDelConto(pred);
-    const troppi = piu && ordine.length > CONTI_VISIBILI;
+    const troppi = ordine.length > CONTI_VISIBILI;
     nota.hidden = !troppi;
     nota.textContent = troppi ? `${ordine.length} conti: scorri per vederli tutti.` : "";
     box.style.maxHeight = "";
     box.scrollTop = 0;
-    const risposta = () => ({ conto: piu ? box.querySelector("input:checked").value : baseId(), foto: casella.checked });
-    return chiedi($("scanDlg"), "scanFatto", "scanDlgAnnulla", risposta, () => {
+    return () => {
       if (!troppi) return;
       // altezza del riquadro = esattamente i primi 5 conti; il conto selezionato viene portato in vista
       const righe = box.children;
       box.style.maxHeight = (righe[CONTI_VISIBILI].offsetTop + 2) + "px";
       const sel = box.querySelector("input:checked");
       if (sel) { const li = sel.closest("li"); box.scrollTop = Math.max(0, li.offsetTop + li.offsetHeight - box.clientHeight); }
-    });
+    };
+  }
+  function chiediConto() {
+    const box = $("scanConti"), casella = $("scanFoto");
+    let toccata = false;
+    const piu = multiConti();
+    const fotoDelConto = (id) => !!(conti.find(c => c.id === id) || {}).foto;
+    casella.onchange = () => { toccata = true; };
+    box.onchange = (e) => { if (!toccata && e.target.name === "scanConto") casella.checked = fotoDelConto(e.target.value); };
+    $("scanDlgTitle").hidden = box.hidden = !piu;
+    // il conto proposto esiste sempre (con un solo conto è proprio quello)
+    const pred = contoPredefinito();
+    const misura = sceltaConti(box, $("scanContiNota"), "scanConto", pred);
+    casella.checked = fotoDelConto(pred);
+    const risposta = () => ({ conto: piu ? box.querySelector("input:checked").value : baseId(), foto: casella.checked });
+    return chiedi($("scanDlg"), "scanFatto", "scanDlgAnnulla", risposta, misura);
   }
 
   // ---- Scansione scontrino ----
@@ -1721,6 +1806,167 @@ dialog.dlg-foto { width: min(560px, calc(100% - 16px)); max-height: calc(100% - 
   }
 
   $("scanBtn").addEventListener("click", scanReceipt);
+
+  // ---- Selezione multipla: pressione lunga su una riga, poi azioni su tutte le spese scelte ----
+  // I tocchi si ascoltano sull'elenco (render() ricrea le righe). Dopo la pressione lunga il tocco che segue
+  // non arriva a quello che c'è sotto il dito (Modifica, Elimina, chip, Scontrino).
+  const PRESSIONE_MS = 500, SPOSTAMENTO_PX = 10;
+  const selBar = $("selBar");
+  const speseScelte = () => rows.filter(r => selezione.has(r.id));
+  const idRigaSotto = (target) => { const li = target.closest && target.closest("#list li.row"); return li ? idDiRiga.get(li) : null; };
+  function nascondiEsitoSel() { selEsito = null; clearTimeout(selTimer); }
+  // Aggiunge o toglie una spesa; la prima entra nella selezione, togliere l'ultima ne esce
+  function cambiaScelta(id) {
+    if (selBusy) return;
+    if (selezione.has(id)) selezione.delete(id); else selezione.add(id);
+    pendingDelete = null; nascondiEsitoSel();
+    render();
+  }
+  function esciSelezione() {
+    if (selBusy) return;
+    selezione.clear(); nascondiEsitoSel();
+    render();
+  }
+  const selInfo = messaggio("selInfo", "sel-info");
+  // tutte le righe dell'elenco sono scelte / tutte le spese della lista sono offerte (scritta e azione dei pulsanti)
+  const tutteScelte = () => selezione.size > 0 && idsMostrati.every(id => selezione.has(id));
+  const tuttiOfferti = (lista) => lista.length > 0 && lista.every(r => r.offerto);
+  function aggiornaBarraSel() {
+    const lista = speseScelte(), n = lista.length;
+    selBar.hidden = !n && !selEsito;
+    $("selAzioni").hidden = !n;
+    const { v, g } = somme(lista);
+    if (selEsito) selInfo(selEsito.t, selEsito.err);
+    else selInfo(`${speseVerbo(n, "selezionata", "selezionate")} · ${euro(v)}` + (g ? ` + ${euro(g)} offerto` : ""));
+    $("selTutte").textContent = tutteScelte() ? "Deseleziona tutte" : "Seleziona tutte";
+    $("selConto").hidden = !multiConti();
+    $("selOfferto").textContent = tuttiOfferti(lista) ? "Non offerto" : "Offerto";
+    selBar.querySelectorAll("button").forEach(b => { b.disabled = selBusy; });
+    // sulla radice (html), così body resta com'è a riposo
+    const radice = document.documentElement.style;
+    if (selBar.hidden) radice.removeProperty("--sel-h"); else radice.setProperty("--sel-h", selBar.offsetHeight + "px");
+  }
+
+  // la barra può cambiare altezza girando il telefono: il margine in fondo la segue
+  window.addEventListener("resize", () => { if (!selBar.hidden) aggiornaBarraSel(); });
+
+  let pressione = null, ignoraClick = false;
+  function annullaPressione() { if (pressione) clearTimeout(pressione.timer); pressione = null; }
+  // ogni nuovo tocco, ovunque, chiude il conto con quello prima
+  window.addEventListener("pointerdown", () => { ignoraClick = false; annullaPressione(); }, true);
+  $("list").addEventListener("pointerdown", (e) => {
+    const id = idRigaSotto(e.target);
+    if (!id || selBusy || !e.isPrimary || e.button !== 0) return;
+    pressione = { x: e.clientX, y: e.clientY, timer: setTimeout(() => { pressione = null; ignoraClick = true; cambiaScelta(id); }, PRESSIONE_MS) };
+  });
+  window.addEventListener("pointermove", (e) => { if (pressione && Math.hypot(e.clientX - pressione.x, e.clientY - pressione.y) > SPOSTAMENTO_PX) annullaPressione(); });
+  ["pointerup", "pointercancel", "scroll"].forEach(t => window.addEventListener(t, annullaPressione, { passive: true }));
+  // fase di cattura: si decide prima che il tocco arrivi ai pulsanti della riga
+  $("list").addEventListener("click", (e) => {
+    const id = idRigaSotto(e.target);
+    if (!ignoraClick && !(id && selezione.size)) return;
+    e.stopPropagation(); e.preventDefault();
+    if (ignoraClick) ignoraClick = false; else cambiaScelta(id);
+  }, true);
+  $("list").addEventListener("contextmenu", (e) => { if (idRigaSotto(e.target)) e.preventDefault(); });
+  // Esc esce dalla selezione (con una ricerca scritta, il primo Esc svuota la ricerca; con una finestra aperta, chiude quella)
+  document.addEventListener("keydown", (e) => {
+    if (e.key !== "Escape" || !selezione.size || document.querySelector("dialog[open]")) return;
+    if (e.target === $("q") && $("q").value) return;
+    esciSelezione();
+  }, true);
+
+  $("selChiudi").addEventListener("click", esciSelezione);
+  $("selTutte").addEventListener("click", () => {
+    if (tutteScelte()) selezione.clear();
+    else idsMostrati.forEach(id => selezione.add(id));
+    nascondiEsitoSel(); render();
+  });
+
+  // Un'azione sulle spese scelte, con un solo salvataggio: cambia(ids) risponde con il nuovo elenco delle spese.
+  // Gli id si rileggono dentro la fila (una spesa può essere sparita nel frattempo). testo(n): esito nella barra.
+  // Se riesce si esce dalla selezione; se no la selezione resta e la barra lo dice. Risponde true se è stato salvato
+  async function suSelezione(cambia, testo) {
+    let n = 0;
+    selBusy = true; nascondiEsitoSel(); aggiornaBarraSel();
+    try {
+      const fatto = await modifica(() => {
+        const ids = new Set(store.filter(r => selezione.has(r.id)).map(r => r.id));
+        n = ids.size;
+        return n ? { store: cambia(ids) } : null;
+      });
+      selezione.clear();
+      if (fatto) { selEsito = { t: testo(n) }; selTimer = setTimeout(() => { selEsito = null; aggiornaBarraSel(); }, 4000); }
+      return !!fatto;
+    } catch (e) {
+      selEsito = { t: "Salvataggio non riuscito. Riprova.", err: true };
+      return false;
+    } finally { selBusy = false; render(); }
+  }
+
+  $("selConto").addEventListener("click", async () => {
+    const lista = speseScelte();
+    if (!lista.length) return;
+    const box = $("selConti"), ok = $("selContoOk");
+    $("selContoTitle").textContent = `Sposta ${spese(lista.length)} nel conto:`;
+    const misura = sceltaConti(box, $("selContiNota"), "selConto", null, (c) => lista.every(r => contoOf(r) === c.id));
+    ok.disabled = true;
+    box.onchange = () => { ok.disabled = !box.querySelector("input:checked"); };
+    const dest = await chiedi($("selContoDlg"), "selContoOk", "selContoAnnulla", () => box.querySelector("input:checked").value, misura);
+    if (!dest) return;
+    await suSelezione((ids) => store.map(r => ids.has(r.id) ? { ...r, conto: dest } : r),
+      (n) => `${speseVerbo(n, "spostata", "spostate")} nel conto «${nomeConto(dest)}»${visibili.has(dest) ? "" : ", che non stai guardando"}.`);
+  });
+
+  $("selOfferto").addEventListener("click", () => {
+    const lista = speseScelte();
+    if (!lista.length) return;
+    const offerto = !tuttiOfferti(lista);
+    suSelezione((ids) => store.map(r => ids.has(r.id) ? { ...r, offerto } : r),
+      (n) => `${speseVerbo(n, "segnata", "segnate")} come ${offerto ? (n === 1 ? "offerta" : "offerte") : (n === 1 ? "non offerta" : "non offerte")}.`);
+  });
+
+  $("selElimina").addEventListener("click", async () => {
+    const lista = speseScelte();
+    if (!lista.length) return;
+    const { v, g } = somme(lista), nFoto = lista.filter(r => r.foto).length;
+    $("selElimTitle").textContent = `Eliminare ${spese(lista.length)}?`;
+    $("selElimSomma").textContent = euro(v) + (g ? ` (+ ${euro(g)} offerto)` : "");
+    $("selElimFoto").hidden = !nFoto;
+    $("selElimFoto").textContent = nFoto === 1 ? "Verrà eliminata anche 1 foto di scontrino." : `Verranno eliminate anche ${nFoto} foto di scontrini.`;
+    if (!await chiedi($("selElimDlg"), "selElimOk", "selElimAnnulla", () => true)) return;
+    // le foto si cancellano solo dopo che la scrittura è riuscita, come nell'eliminazione di una spesa
+    let foto = [];
+    const fatto = await suSelezione((ids) => {
+      foto = store.filter(r => ids.has(r.id) && r.foto).map(r => r.foto);
+      return store.filter(r => !ids.has(r.id));
+    }, (n) => `${speseVerbo(n, "eliminata", "eliminate")}.`);
+    if (fatto) foto.forEach(f => cancellaFoto(f));
+  });
+
+  // ---- Tasto Indietro di Android (plugin App, solo negli APK che lo hanno) ----
+  // Il gestore del plugin è spento all'avvio (capacitor.config.json: disableBackButtonHandler), quindi il tasto
+  // fa quello che ha sempre fatto Android. Si accende solo mentre serve alla pagina: selezione attiva o una finestra aperta.
+  // Negli APK senza il plugin le chiamate falliscono e il tasto Indietro resta quello di Android.
+  const AppAndroid = isNative ? plugin("App") : null;
+  let indietroAcceso = null;
+  function aggiornaIndietro() {
+    const serve = selezione.size > 0 || !!document.querySelector("dialog[open]");
+    if (!AppAndroid || serve === indietroAcceso) return;
+    indietroAcceso = serve;
+    try { Promise.resolve(AppAndroid.toggleBackButtonHandler({ enabled: serve })).catch(() => {}); } catch (e) {}
+  }
+  // Indietro con una finestra aperta: la chiude come Esc (o Annulla); altrimenti esce dalla selezione
+  function tastoIndietro() {
+    const aperte = document.querySelectorAll("dialog[open]");
+    const d = aperte[aperte.length - 1];
+    if (d) { if (d.dispatchEvent(new Event("cancel", { cancelable: true }))) d.close(); }
+    else if (selezione.size) esciSelezione();
+  }
+  if (AppAndroid) {
+    try { Promise.resolve(AppAndroid.addListener("backButton", tastoIndietro)).catch(() => {}); } catch (e) {}
+    new MutationObserver(aggiornaIndietro).observe(document.body, { subtree: true, attributes: true, attributeFilter: ["open"] });
+  }
 
   // ---- Backup: esporta / importa ----
   const stamp = () => today().replace(/-/g, "");
