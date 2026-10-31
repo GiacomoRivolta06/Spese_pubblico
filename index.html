@@ -154,7 +154,8 @@ h1 { font-family: var(--f-display); font-weight: 700; font-size: 1.6rem; letter-
 
 /* Modulo */
 form.entry { background: var(--paper); border: 1px solid var(--line); border-radius: 10px; padding: 16px; display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-form.entry h2 { grid-column: 1 / -1; margin: 0; font-family: var(--f-display); font-weight: 600; font-size: 1.05rem; }
+/* titolo come quello delle finestre (.dlg-body h2) */
+form.entry h2 { grid-column: 1 / -1; margin: 0; font-family: var(--f-display); font-weight: 600; font-size: 1.1rem; }
 .field { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
 .field.full { grid-column: 1 / -1; }
 .field label { font-size: .72rem; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); font-weight: 600; }
@@ -162,13 +163,14 @@ input[type=text], input[type=search], input[type=date], input[inputmode], select
   font: inherit; color: var(--ink); background: var(--bg); border: 1px solid var(--line); border-radius: 8px; padding: 9px 10px; width: 100%; min-width: 0;
 }
 input:focus, select:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
-/* Data: un pulsante con l'aspetto dei campi che apre il calendario (#calDlg). Il campo vero (#f-data) resta nel modulo,
-   invisibile ma non nascosto, con il valore AAAA-MM-GG */
-.data-btn { display: flex; align-items: center; justify-content: space-between; gap: 6px; width: 100%; min-width: 0; text-align: left; color: var(--ink); background: var(--bg); border: 1px solid var(--line); border-radius: 8px; padding: 9px 10px; }
-.data-btn span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.data-btn svg { flex: none; color: var(--muted); }
-.data-btn:focus-visible { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
-.field input.data-nascosta { position: absolute; width: 1px; height: 1px; min-width: 0; padding: 0; border: 0; opacity: 0; pointer-events: none; }
+/* Data, conto, mese e anno: un pulsante con l'aspetto dei campi (.campo-btn) che apre il calendario (#calDlg) o un elenco
+   (#listaDlg). Il campo vero (#f-data, le <select>) resta al suo posto, invisibile ma non nascosto, con il valore
+   (.campo-nascosto: :is() pesa quanto input[type=date] e viene dopo, quindi vince sulle misure dei campi) */
+.campo-btn { display: flex; align-items: center; justify-content: space-between; gap: 6px; width: 100%; min-width: 0; text-align: left; color: var(--ink); background: var(--bg); border: 1px solid var(--line); border-radius: 8px; padding: 9px 10px; }
+.campo-btn span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.campo-btn svg { flex: none; color: var(--muted); }
+.campo-btn:focus-visible { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+:is(input, select).campo-nascosto { position: absolute; width: 1px; height: 1px; min-width: 0; padding: 0; border: 0; opacity: 0; pointer-events: none; }
 /* Prezzo: a sinistra il pulsante della valuta, nello stesso riquadro del campo, separati da una linea */
 .price-wrap { display: flex; align-items: stretch; min-width: 0; background: var(--bg); border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
 .price-wrap:focus-within { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
@@ -188,30 +190,40 @@ input:focus, select:focus { outline: none; border-color: var(--accent); box-shad
 .valute-list { list-style: none; margin: 0; padding: 0; border: 1px solid var(--line); border-radius: 10px; }
 .valute-list li { border-top: 1px solid var(--line); }
 .valute-list li:first-child { border-top: 0; }
-.valuta-riga { display: flex; align-items: baseline; gap: 12px; width: 100%; border: 0; background: none; text-align: left; padding: 10px 12px; }
-.valuta-riga:hover { background: var(--bg); }
+/* Riga di lista comune: valute ed elenchi a scelta (.valuta-riga), suggerimenti (.ac-list), liste di conti (con casella o radio).
+   Stesse misure, stesso passaggio, stessa voce corrente/scelta. :where() non pesa: vince l'ordine (scelta dopo passaggio) */
+:where(.valuta-riga, .ac-list li, .conti-list label, .scelta-conti label) { padding: 10px 12px; gap: 12px; cursor: pointer; }
+:where(.valuta-riga, .ac-list li, .conti-list li, .scelta-conti li) { background: none; }
+:where(.valuta-riga:hover, .ac-list li:hover, .conti-list li:hover, .scelta-conti li:hover:not(:has(input:disabled))) { background: var(--bg); }
+:where(.valuta-riga[aria-current="true"], .ac-list li[aria-selected="true"], .conti-list li.aperto, .scelta-conti li:has(input:checked)) { background: var(--accent-soft); }
+.valuta-riga { display: flex; align-items: baseline; width: 100%; border: 0; text-align: left; }
 .valuta-riga b { font-family: var(--f-num); font-weight: 600; flex: none; }
 .valuta-riga span { color: var(--muted); font-size: .88rem; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.valuta-riga[aria-current="true"] { background: var(--accent-soft); }
 .valute-tit { margin: 4px 0 -4px; font-size: .72rem; text-transform: uppercase; letter-spacing: .09em; color: var(--muted); font-weight: 600; }
 .imp-sez .valuta-base { align-self: flex-start; }
 .check { display: flex; align-items: center; gap: 10px; align-self: end; padding: 9px 2px; cursor: pointer; user-select: none; }
 .check input { width: 20px; height: 20px; accent-color: var(--gift); margin: 0; }
 .check span { font-weight: 600; }
-.form-actions { grid-column: 1 / -1; display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+/* Pulsanti del modulo come quelli delle finestre (.dlg-actions): Annulla, poi il primario, a destra;
+   il messaggio, quando c'è, su una riga sua sopra i pulsanti */
+.form-actions { grid-column: 1 / -1; display: flex; gap: 8px; align-items: center; justify-content: flex-end; flex-wrap: wrap; }
+.form-actions .form-msg { flex: 1 0 100%; }
+.form-actions .form-msg:empty { display: none; }
 .primary { background: var(--accent); color: var(--accent-ink); border: 0; border-radius: 8px; padding: 10px 18px; font-weight: 600; }
 .primary:disabled { opacity: .5; cursor: default; }
 .ghost { background: none; border: 1px solid var(--line); border-radius: 8px; padding: 9px 14px; }
 .form-msg { font-size: .85rem; color: var(--muted); }
 .form-msg.err { color: var(--danger); }
 
-/* Suggerimenti tipologia: piccoli, solo dopo 2 lettere */
+/* Suggerimenti di tipologia ed esercente, solo dopo 2 lettere: un menu sopra il modulo (sfondo e ombra propri)
+   con le righe come quelle dell'elenco delle valute (misure, separatori, passaggio e voce evidenziata) */
 .ac { position: relative; }
-.ac-list { position: absolute; left: 0; right: 0; top: calc(100% + 3px); z-index: 20; margin: 0; padding: 3px; list-style: none;
-  background: var(--paper); border: 1px solid var(--line); border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,.08); max-height: 9.5em; overflow-y: auto; }
-.ac-list li { padding: 5px 8px; border-radius: 5px; font-size: .86rem; color: var(--muted); cursor: pointer; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ac-list { position: absolute; left: 0; right: 0; top: calc(100% + 3px); z-index: 20; margin: 0; padding: 0; list-style: none;
+  background: var(--paper); border: 1px solid var(--line); border-radius: 10px; box-shadow: 0 4px 12px rgba(0,0,0,.08); overflow: hidden; }
+.ac-list li { border-top: 1px solid var(--line); color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ac-list li:first-child { border-top: 0; }
 .ac-list li b { color: var(--ink); font-weight: 600; }
-.ac-list li:hover, .ac-list li[aria-selected="true"] { background: var(--accent-soft); color: var(--ink); }
+.ac-list li[aria-selected="true"] { color: var(--ink); }
 
 /* Avviso di aggiornamento pronto */
 .upd { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 12px; background: var(--accent-soft); border: 1px solid var(--accent); border-radius: 10px; padding: 10px 12px; font-size: .9rem; }
@@ -302,7 +314,8 @@ dialog.dlg::backdrop { background: rgba(10, 20, 25, .45); }
 .conti-list li, .scelta-conti li { border-top: 1px solid var(--line); }
 .conti-list li:first-child, .scelta-conti li:first-child { border-top: 0; }
 .conti-list li { display: flex; align-items: center; }
-.conti-list label { display: flex; align-items: center; gap: 12px; padding: 11px 12px; cursor: pointer; user-select: none; }
+/* Righe delle liste di conti (misure e stati: riga di lista comune); la casella o il radio restano a sinistra */
+.conti-list label, .scelta-conti label { display: flex; align-items: center; user-select: none; }
 .conti-list input[type=checkbox], .scelta-conti input, .foto-box input, .spunta input { width: 20px; height: 20px; margin: 0; accent-color: var(--accent); flex: none; }
 .conti-list .nome, .scelta-conti .nome { flex: 1; min-width: 0; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .conti-list small { color: var(--muted); font-size: .8rem; flex: none; }
@@ -310,10 +323,9 @@ dialog.dlg::backdrop { background: rgba(10, 20, 25, .45); }
 .conti-list li > label { flex: 1; min-width: 0; padding-right: 4px; }
 .matita { flex: none; border: 0; background: none; color: var(--muted); width: 40px; height: 40px; margin-right: 4px; border-radius: 8px; display: grid; place-items: center; }
 .matita:hover { color: var(--accent); background: var(--bg); }
-.conti-list li.aperto { background: var(--accent-soft); }
 .conto-edit { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 10px; padding: 12px; }
 .conto-edit .primary { padding: 9px 14px; flex: none; }
-.conto-edit select { flex: 1; }
+.conto-edit .campo-btn { flex: 1; width: auto; }
 .conto-edit .domanda { margin: 0; font-size: .9rem; font-weight: 600; }
 .conto-edit .hint { color: var(--muted); font-size: .8rem; }
 .edit-azioni { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 16px; }
@@ -324,8 +336,6 @@ dialog.dlg::backdrop { background: rgba(10, 20, 25, .45); }
 .dlg-actions { display: flex; justify-content: flex-end; gap: 8px; }
 /* Scelta del conto per lo scontrino: riquadro a sé, al massimo 5 conti visibili, poi si scorre */
 .scelta-conti { position: relative; list-style: none; margin: 0; padding: 0; border: 1px solid var(--line); border-radius: 10px; overflow-y: auto; overscroll-behavior: contain; -webkit-overflow-scrolling: touch; }
-.scelta-conti label { display: flex; align-items: center; gap: 12px; padding: 12px 14px; cursor: pointer; user-select: none; }
-.scelta-conti li:has(input:checked) { background: var(--accent-soft); }
 .scelta-conti label:has(input:disabled) { opacity: .5; cursor: default; }
 .scelta-nota { margin: -6px 0 0; color: var(--muted); font-size: .8rem; }
 /* Calendario per scegliere un periodo: mese con giorni lun–dom; estremi pieni, giorni in mezzo tenui, oggi col contorno.
@@ -335,8 +345,12 @@ dialog.dlg::backdrop { background: rgba(10, 20, 25, .45); }
 #calDlg .dlg-actions button { padding-block: 7px; }
 .cal-testa { display: flex; align-items: center; gap: 6px; }
 .cal-testa .icon-btn { width: 32px; height: 32px; flex: none; }
-.cal-testa select { flex: 1 1 0; width: auto; padding: 5px 6px; }
-.cal-testa #calAnno { flex: 0 0 5.6em; }
+/* Mese e anno: pulsanti come la Data del modulo; le tendine restano nascoste e tengono il valore */
+.cal-testa .campo-btn { flex: 1 1 0; width: auto; padding: 5px 6px 5px 8px; }
+.cal-testa #calAnnoBtn { flex: 0 0 5.6em; }
+/* Elenco a scelta (mese, anno): si scorre l'elenco, titolo e Annulla restano fermi */
+#listaDlg { width: min(300px, calc(100% - 32px)); }
+#listaDlg .valute-list { position: relative; max-height: min(60vh, 24em); overflow-y: auto; overscroll-behavior: contain; }
 .cal-griglia { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 0 2px; text-align: center; }
 .cal-wd { font-size: .7rem; text-transform: uppercase; color: var(--muted); font-weight: 600; padding: 0 0 2px; }
 .cal-g { border: 0; background: none; height: 36px; border-radius: 8px; font-family: var(--f-num); font-size: .88rem; }
@@ -391,7 +405,8 @@ dialog.dlg-imp { width: min(460px, calc(100% - 24px)); }
 dialog.dlg-foto { width: min(560px, calc(100% - 16px)); max-height: calc(100% - 16px); }
 .foto-vista { display: grid; place-items: center; min-height: 160px; background: var(--bg); border-radius: 8px; overflow: hidden; color: var(--muted); font-size: .86rem; }
 .foto-vista img { display: block; width: 100%; height: auto; }
-.foto-azioni { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+/* Si chiude con la X in alto, come il modulo e le impostazioni; qui solo "Elimina foto" */
+.foto-azioni { display: flex; align-items: center; gap: 8px; }
 .form-foto { grid-column: 1 / -1; display: flex; align-items: center; gap: 8px; font-size: .84rem; color: var(--muted); }
 .form-foto svg { color: var(--accent); flex: none; }
 .gf-testa { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; font-size: .82rem; color: var(--muted); margin-bottom: -4px; }
@@ -504,7 +519,10 @@ body:has(.sel-bar:not([hidden])) { padding-bottom: calc(var(--sel-h, 0px) + 24px
     </div>
     <div class="field">
       <label for="f-eserc">Esercente</label>
-      <input type="text" id="f-eserc" list="dl-eserc" placeholder="es. Esselunga" required>
+      <div class="ac">
+        <input type="text" id="f-eserc" placeholder="es. Esselunga" required role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="ac-eserc">
+        <ul class="ac-list" id="ac-eserc" role="listbox" aria-label="Esercenti suggeriti" hidden></ul>
+      </div>
     </div>
     <div class="field">
       <label for="f-prezzo">Prezzo</label>
@@ -512,8 +530,8 @@ body:has(.sel-bar:not([hidden])) { padding-bottom: calc(var(--sel-h, 0px) + 24px
     </div>
     <div class="field">
       <label for="f-data-btn" id="f-data-lab">Data</label>
-      <button type="button" class="data-btn" id="f-data-btn" aria-haspopup="dialog" aria-labelledby="f-data-lab f-data-testo"><span id="f-data-testo"></span><svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><rect x="4" y="5.5" width="16" height="14.5" rx="2" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M4 10h16M8.5 3.5v4M15.5 3.5v4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></button>
-      <input type="date" id="f-data" class="data-nascosta" required tabindex="-1" aria-hidden="true">
+      <button type="button" class="campo-btn" id="f-data-btn" aria-haspopup="dialog" aria-labelledby="f-data-lab f-data-testo"><span id="f-data-testo"></span><svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><rect x="4" y="5.5" width="16" height="14.5" rx="2" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M4 10h16M8.5 3.5v4M15.5 3.5v4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></button>
+      <input type="date" id="f-data" class="campo-nascosto" required tabindex="-1" aria-hidden="true">
     </div>
     <div class="cambio-riga" id="cambioBox" hidden>
       <div class="field">
@@ -531,8 +549,9 @@ body:has(.sel-bar:not([hidden])) { padding-bottom: calc(var(--sel-h, 0px) + 24px
       <button type="button" class="ghost" id="f-conforma" hidden>Conforma</button>
     </div>
     <div class="field full" id="contoField" hidden>
-      <label for="f-conto">Conto</label>
-      <select id="f-conto"></select>
+      <label for="f-conto-btn">Conto</label>
+      <button type="button" id="f-conto-btn"></button>
+      <select id="f-conto" aria-label="Conto"></select>
     </div>
     <div class="field full">
       <label for="f-nota" class="lab-row">Nota <span class="cnt" id="notaCnt">0/20</span></label>
@@ -544,11 +563,10 @@ body:has(.sel-bar:not([hidden])) { padding-bottom: calc(var(--sel-h, 0px) + 24px
     </label>
     <p class="form-foto" id="formFoto" hidden><svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M6 3h12v18l-3-2-3 2-3-2-3 2z M9 8h6M9 12h6" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round"/></svg><span>La foto dello scontrino verrà salvata con la spesa.</span></p>
     <div class="form-actions">
-      <button class="primary" type="submit" id="save">Aggiungi</button>
-      <button class="ghost" type="button" id="cancel">Annulla</button>
       <span class="form-msg" id="msg" role="status"></span>
+      <button class="ghost" type="button" id="cancel">Annulla</button>
+      <button class="primary" type="submit" id="save">Aggiungi</button>
     </div>
-    <datalist id="dl-eserc"></datalist>
   </form>
   </dialog>
 
@@ -588,6 +606,19 @@ body:has(.sel-bar:not([hidden])) { padding-bottom: calc(var(--sel-h, 0px) + 24px
       <button type="button" class="chiudi" id="chiudiImp" aria-label="Chiudi"><svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></button>
     </div>
 
+    <section class="imp-sez" id="impValutaSez" aria-labelledby="impValuta">
+      <h3 id="impValuta">Valuta di base</h3>
+      <p>Totali, grafico ed Excel sono in questa valuta. Le spese già inserite restano come sono.</p>
+      <button type="button" class="ghost valuta-base" id="valutaBaseBtn" aria-haspopup="dialog">EUR · euro</button>
+      <span class="form-msg" id="valutaMsg" role="status"></span>
+    </section>
+
+    <section class="imp-sez" aria-labelledby="impAspetto">
+      <h3 id="impAspetto">Aspetto</h3>
+      <label class="interruttore"><span>Tema scuro</span><input type="checkbox" role="switch" id="temaScuro"></label>
+      <button type="button" class="link" id="temaSistema" hidden>Usa il tema del telefono</button>
+    </section>
+
     <section class="imp-sez" aria-labelledby="impScontrini">
       <h3 id="impScontrini">Scontrini</h3>
       <p>Se salvare la foto dello scontrino dipende dal conto: lo scegli quando crei un conto o lo modifichi con la matita (tocca il nome in alto).</p>
@@ -609,19 +640,6 @@ body:has(.sel-bar:not([hidden])) { padding-bottom: calc(var(--sel-h, 0px) + 24px
         <button type="button" class="ghost" id="exportCsv">Esporta tutto in Excel</button>
       </div>
       <span class="form-msg" id="backupMsg" role="status"></span>
-    </section>
-
-    <section class="imp-sez" id="impValutaSez" aria-labelledby="impValuta">
-      <h3 id="impValuta">Valuta di base</h3>
-      <p>Totali, grafico ed Excel sono in questa valuta. Le spese già inserite restano come sono.</p>
-      <button type="button" class="ghost valuta-base" id="valutaBaseBtn" aria-haspopup="dialog">EUR · euro</button>
-      <span class="form-msg" id="valutaMsg" role="status"></span>
-    </section>
-
-    <section class="imp-sez" aria-labelledby="impAspetto">
-      <h3 id="impAspetto">Aspetto</h3>
-      <label class="interruttore"><span>Tema scuro</span><input type="checkbox" role="switch" id="temaScuro"></label>
-      <button type="button" class="link" id="temaSistema" hidden>Usa il tema del telefono</button>
     </section>
 
     <section class="imp-sez" aria-labelledby="impApp">
@@ -670,12 +688,11 @@ body:has(.sel-bar:not([hidden])) { padding-bottom: calc(var(--sel-h, 0px) + 24px
   <div class="dlg-body">
     <div class="dlg-head">
       <h2 id="fotoTitle">Scontrino</h2>
-      <button type="button" class="chiudi" id="chiudiFoto" aria-label="Chiudi"><svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></button>
+      <button type="button" class="chiudi" id="fotoChiudi" aria-label="Chiudi"><svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></button>
     </div>
     <div class="foto-vista" id="fotoVista"></div>
     <div class="foto-azioni">
       <button type="button" class="link danger" id="fotoElimina">Elimina foto</button>
-      <button type="button" class="primary" id="fotoChiudi">Chiudi</button>
     </div>
   </div>
 </dialog>
@@ -730,6 +747,8 @@ body:has(.sel-bar:not([hidden])) { padding-bottom: calc(var(--sel-h, 0px) + 24px
   <div class="dlg-body">
     <div class="cal-testa">
       <button type="button" class="icon-btn" id="calPrev" aria-label="Mese precedente">‹</button>
+      <button type="button" id="calMeseBtn"></button>
+      <button type="button" id="calAnnoBtn"></button>
       <select id="calMese" aria-label="Mese"></select>
       <select id="calAnno" aria-label="Anno"></select>
       <button type="button" class="icon-btn" id="calNext" aria-label="Mese successivo">›</button>
@@ -748,6 +767,14 @@ body:has(.sel-bar:not([hidden])) { padding-bottom: calc(var(--sel-h, 0px) + 24px
     <h3 class="valute-tit">Tutte</h3>
     <ul class="valute-list" id="valuteTutte"></ul>
     <div class="dlg-actions"><button type="button" class="ghost" id="valutaAnnulla">Annulla</button></div>
+  </div>
+</dialog>
+
+<dialog class="dlg" id="listaDlg" aria-labelledby="listaTitle">
+  <div class="dlg-body">
+    <h2 id="listaTitle"></h2>
+    <ul class="valute-list" id="listaVoci"></ul>
+    <div class="dlg-actions"><button type="button" class="ghost" id="listaAnnulla">Annulla</button></div>
   </div>
 </dialog>
 
@@ -1135,7 +1162,7 @@ body:has(.sel-bar:not([hidden])) { padding-bottom: calc(var(--sel-h, 0px) + 24px
     $("contoField").hidden = !multiConti();
     const sel = $("f-conto"), cur = sel.value;
     sel.replaceChildren(...conti.map(c => el("option", { value: c.id }, c.nome)));
-    sel.value = conti.some(c => c.id === cur) ? cur : contoPredefinito();
+    impostaConto(conti.some(c => c.id === cur) ? cur : contoPredefinito());
   }
 
   // Tipologie ed esercenti si confrontano senza badare a maiuscole/minuscole
@@ -1383,7 +1410,6 @@ body:has(.sel-bar:not([hidden])) { padding-bottom: calc(var(--sel-h, 0px) + 24px
 
     // suggerimenti
     tipiSugg = uniqByKey([...canon.tipologia.values(), ...DEFAULT_TIPI]);
-    fillDatalist("dl-eserc", [...canon.esercente.values()]);
     renderQuick();
     aggiornaBarraSel();
     aggiornaIndietro();
@@ -1414,52 +1440,65 @@ body:has(.sel-bar:not([hidden])) { padding-bottom: calc(var(--sel-h, 0px) + 24px
     $("f-eserc").value = esercName(r.esercente);
     impostaData(today());
     const conto = contoOf(r);
-    if (visibili.has(conto)) $("f-conto").value = conto;
+    if (visibili.has(conto)) impostaConto(conto);
     setMsg("Inserisci il prezzo e premi Aggiungi.");
     $("f-prezzo").focus();
   }
 
-  function fillDatalist(id, vals) {
-    $(id).replaceChildren(...vals.map(v => el("option", { value: v })));
-  }
-
-  // ---- Suggerimenti tipologia: compaiono solo dopo 2 lettere ----
-  const acIn = $("f-tipo"), acList = $("ac-tipo");
-  let acItems = [], acSel = -1;
-  function acClose() { acList.hidden = true; acList.replaceChildren(); acItems = []; acSel = -1; acIn.setAttribute("aria-expanded", "false"); acIn.removeAttribute("aria-activedescendant"); }
-  function acOpen() {
-    const q = norm(acIn.value.trim());
-    if (q.length < 2) { acClose(); return; }
-    const starts = [], has = [];
-    tipiSugg.forEach(t => { const n = norm(t); if (n === q) return; if (n.startsWith(q)) starts.push(t); else if (n.includes(q)) has.push(t); });
-    acItems = [...starts, ...has].slice(0, 5);
-    if (!acItems.length) { acClose(); return; }
-    acSel = -1;
-    acList.replaceChildren(...acItems.map((t, i) => {
+  // ---- Suggerimenti sotto un campo di testo (tipologia, esercente) ----
+  // Compaiono dopo 2 lettere: prima i nomi che iniziano così, poi quelli che contengono, al massimo 5, con la parte
+  // scritta in grassetto; il nome identico non si propone. Frecce e Invio scelgono, Esc chiude solo la lista,
+  // un tocco sceglie senza togliere il focus al campo; la lista si chiude quando il campo lo perde.
+  // fonte(): i nomi possibili; dopoScelta(): dopo aver scelto (di solito il focus sul campo seguente);
+  // idVoce: inizio degli id delle voci (per aria-activedescendant); è un parametro e non si ricava da ul.id perché
+  // quelli della tipologia sono "ac-opt-N" (contratto del test 03). Risponde con la funzione che chiude la lista
+  const SUGG_MAX = 5;
+  function suggerimenti(input, ul, fonte, dopoScelta, idVoce) {
+    let voci = [], sel = -1;
+    function chiudi() {
+      ul.hidden = true; ul.replaceChildren(); voci = []; sel = -1;
+      input.setAttribute("aria-expanded", "false"); input.removeAttribute("aria-activedescendant");
+    }
+    function creaVoce(t, i, q) {
       const at = norm(t).indexOf(q);
-      const li = el("li", { id: "ac-opt-" + i, role: "option", "aria-selected": "false" },
+      const li = el("li", { id: idVoce + i, role: "option", "aria-selected": "false" },
         t.slice(0, at), el("b", null, t.slice(at, at + q.length)), t.slice(at + q.length));
-      li.addEventListener("pointerdown", (e) => { e.preventDefault(); acPick(i); });
+      li.addEventListener("pointerdown", (e) => { e.preventDefault(); scegli(i); });
       return li;
-    }));
-    acList.hidden = false; acIn.setAttribute("aria-expanded", "true");
+    }
+    function apri() {
+      const q = norm(input.value.trim());
+      if (q.length < 2) { chiudi(); return; }
+      const inizio = [], dentro = [];
+      fonte().forEach(t => { const n = norm(t); if (n === q) return; if (n.startsWith(q)) inizio.push(t); else if (n.includes(q)) dentro.push(t); });
+      voci = [...inizio, ...dentro].slice(0, SUGG_MAX);
+      if (!voci.length) { chiudi(); return; }
+      sel = -1;
+      ul.replaceChildren(...voci.map((t, i) => creaVoce(t, i, q)));
+      ul.hidden = false; input.setAttribute("aria-expanded", "true");
+    }
+    function evidenzia(i) {
+      sel = i;
+      [...ul.children].forEach((li, j) => li.setAttribute("aria-selected", j === i ? "true" : "false"));
+      if (i >= 0) { input.setAttribute("aria-activedescendant", idVoce + i); ul.children[i].scrollIntoView({ block: "nearest" }); }
+      else input.removeAttribute("aria-activedescendant");
+    }
+    function scegli(i) { input.value = voci[i]; chiudi(); dopoScelta(); }
+    input.addEventListener("input", apri);
+    input.addEventListener("blur", chiudi);
+    input.addEventListener("keydown", (e) => {
+      if (ul.hidden) return;
+      if (e.key === "ArrowDown") { e.preventDefault(); evidenzia((sel + 1) % voci.length); }
+      else if (e.key === "ArrowUp") { e.preventDefault(); evidenzia(sel <= 0 ? voci.length - 1 : sel - 1); }
+      else if (e.key === "Enter" && sel >= 0) { e.preventDefault(); scegli(sel); }
+      else if (e.key === "Escape") { e.preventDefault(); chiudi(); }
+    });
+    return chiudi;
   }
-  function acMark(i) {
-    acSel = i;
-    [...acList.children].forEach((li, j) => li.setAttribute("aria-selected", j === i ? "true" : "false"));
-    if (i >= 0) { acIn.setAttribute("aria-activedescendant", "ac-opt-" + i); acList.children[i].scrollIntoView({ block: "nearest" }); }
-    else acIn.removeAttribute("aria-activedescendant");
-  }
-  function acPick(i) { acIn.value = acItems[i]; acClose(); $("f-eserc").focus(); }
-  acIn.addEventListener("input", acOpen);
-  acIn.addEventListener("blur", acClose);
-  acIn.addEventListener("keydown", (e) => {
-    if (acList.hidden) return;
-    if (e.key === "ArrowDown") { e.preventDefault(); acMark((acSel + 1) % acItems.length); }
-    else if (e.key === "ArrowUp") { e.preventDefault(); acMark(acSel <= 0 ? acItems.length - 1 : acSel - 1); }
-    else if (e.key === "Enter" && acSel >= 0) { e.preventDefault(); acPick(acSel); }
-    else if (e.key === "Escape") { e.preventDefault(); acClose(); }
-  });
+  // Tipologia: le tipologie usate e quelle predefinite; esercente: la grafia più usata di ciascuno
+  const chiudiSuggTipo = suggerimenti($("f-tipo"), $("ac-tipo"), () => tipiSugg, () => $("f-eserc").focus(), "ac-opt-");
+  const chiudiSuggEserc = suggerimenti($("f-eserc"), $("ac-eserc"), () => [...canon.esercente.values()], () => $("f-prezzo").focus(), "ac-eserc-opt-");
+  function chiudiSuggerimenti() { chiudiSuggTipo(); chiudiSuggEserc(); }
 
   const ICONA_SCONTRINO = '<svg viewBox="0 0 24 24" width="13" height="13" aria-hidden="true"><path d="M6 3h12v18l-3-2-3 2-3-2-3 2z M9 8h6M9 12h6" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/></svg>';
   // Riga dell'elenco -> id della spesa (per i tocchi sull'elenco, senza aggiungere attributi alle righe)
@@ -1516,7 +1555,7 @@ body:has(.sel-bar:not([hidden])) { padding-bottom: calc(var(--sel-h, 0px) + 24px
     prezzoInModifica(r);
     $("f-off").checked = !!r.offerto;
     $("f-nota").value = r.nota || ""; updNotaCnt();
-    $("f-conto").value = contoOf(r);
+    impostaConto(contoOf(r));
     $("formTitle").textContent = "Modifica spesa";
     $("save").textContent = "Salva modifiche";
     setMsg(""); esito("");
@@ -1536,7 +1575,7 @@ body:has(.sel-bar:not([hidden])) { padding-bottom: calc(var(--sel-h, 0px) + 24px
     $("form").reset();
     impostaData(keepDate);
     modulo.disc = null; impostaValuta(valutaBase);  // toglie anche la nota di Conforma
-    $("f-conto").value = contoPredefinito();
+    impostaConto(contoPredefinito());
     updNotaCnt();
     fotoInAttesa = null; $("formFoto").hidden = true;
     $("formTitle").textContent = "Nuova spesa";
@@ -1684,23 +1723,81 @@ body:has(.sel-bar:not([hidden])) { padding-bottom: calc(var(--sel-h, 0px) + 24px
     return valuta === base ? prezzoNellaBase(campi.importoCent, base, old) : prezzoInEstera(campi, base, valuta);
   }
 
+  // ---- Finestre di scelta da un elenco: valute, mese e anno del calendario ----
+  // Riga: voce { valore, testo, codice? } (il codice, se c'è, in grassetto prima del testo); evidenziata se è la corrente
+  const rigaScelta = (voce, corrente, scegli) => el("li", null,
+    btn({ className: "valuta-riga", "aria-current": voce.valore === corrente ? "true" : null },
+      voce.codice != null ? [el("b", null, voce.codice), el("span", null, voce.testo)] : voce.testo, () => scegli(voce.valore)));
+  // Apre la finestra d dopo averne riempito gli elenchi con riempi(scegli), poi chiama dopoApertura() (scorrimento e
+  // focus, che servono a finestra aperta); risponde con il valore scelto, oppure null (Annulla, Esc, tocco fuori, Indietro)
+  function sceltaIn(d, riempi, dopoApertura) {
+    let scelta = null;
+    riempi((v) => { scelta = v; d.close(); });
+    const chiusa = new Promise((resolve) => d.addEventListener("close", () => resolve(scelta), { once: true }));
+    d.showModal();
+    dopoApertura();
+    return chiusa;
+  }
+  // Finestra #listaDlg: titolo, un elenco con la voce corrente evidenziata e portata in vista, Annulla
+  const listaDlg = $("listaDlg");
+  function sceltaDaLista(titolo, voci, corrente) {
+    const ul = $("listaVoci");
+    return sceltaIn(listaDlg, (scegli) => {
+      $("listaTitle").textContent = titolo;
+      ul.replaceChildren(...voci.map(v => rigaScelta(v, corrente, scegli)));
+    }, () => mostraCorrente(ul));
+  }
+  // La voce corrente al centro dell'elenco, con il focus
+  function mostraCorrente(ul) {
+    const b = ul.querySelector('[aria-current="true"]');
+    if (!b) return;
+    ul.scrollTop = b.offsetTop - (ul.clientHeight - b.offsetHeight) / 2;
+    b.focus({ preventScroll: true });
+  }
+  $("listaAnnulla").addEventListener("click", () => listaDlg.close());
+  // Tendina mostrata come pulsante (.campo-btn, testo + freccia): la <select> resta nel DOM nascosta (.campo-nascosto)
+  // e tiene il valore; il pulsante mostra la voce scelta e apre l'elenco delle voci (sceltaDaLista).
+  // La scelta passa alla tendina con "change", come a mano; il pulsante si ridisegna a ogni "change" e con imposta(v),
+  // l'unico modo in cui l'app scrive la tendina. titolo: nome del campo (titolo dell'elenco, inizio dell'aria-label)
+  const CHEVRON = '<svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path d="M7 10l5 5 5-5" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+  function tendinaConPulsante(pulsante, tendina, titolo) {
+    pulsante.className = "campo-btn"; pulsante.setAttribute("aria-haspopup", "dialog");
+    pulsante.replaceChildren(el("span")); pulsante.insertAdjacentHTML("beforeend", CHEVRON);
+    tendina.className = "campo-nascosto"; tendina.tabIndex = -1; tendina.setAttribute("aria-hidden", "true");
+    function aggiornaPulsante() {
+      const o = tendina.selectedOptions[0], t = o ? o.textContent : "";
+      pulsante.firstChild.textContent = t;
+      pulsante.setAttribute("aria-label", `${titolo}: ${t}`);
+    }
+    pulsante.addEventListener("click", async () => {
+      const v = await sceltaDaLista(titolo, [...tendina.options].map(o => ({ valore: o.value, testo: o.textContent })), tendina.value);
+      if (v == null || v === tendina.value) return;
+      tendina.value = v;
+      tendina.dispatchEvent(new Event("change", { bubbles: true }));
+    });
+    tendina.addEventListener("change", aggiornaPulsante);
+    aggiornaPulsante();
+    return { imposta(v) { tendina.value = v; aggiornaPulsante(); } };
+  }
+  // Conto del modulo (solo con più conti)
+  const contoModulo = tendinaConPulsante($("f-conto-btn"), $("f-conto"), "Conto");
+  function impostaConto(id) { contoModulo.imposta(id); }
+
   // ---- Finestra delle valute: in alto la base, le ultime usate e le principali (al massimo 8), sotto tutte ----
+  // Resta una finestra sua (non sceltaDaLista): due elenchi con il titolo "Tutte" in mezzo (#valuteTop, #valuteTutte,
+  // contratto dei test 14-16), la stessa valuta può stare in entrambi e si apre dall'inizio, non sulla corrente.
+  // In comune con #listaDlg: la riga (rigaScelta) e l'apertura con la risposta (sceltaIn)
   const valutaDlg = $("valutaDlg");
-  const rigaValuta = (v, corrente, scegli) => el("li", null,
-    btn({ className: "valuta-riga", "aria-current": v === corrente ? "true" : null }, [el("b", null, v), el("span", null, nomeValuta(v))], () => scegli(v)));
+  const voceValuta = (v) => ({ valore: v, codice: v, testo: nomeValuta(v) });
   // Risponde con il codice scelto, oppure null (Annulla, Esc, tocco fuori)
   function sceltaValuta(corrente, titolo) {
     const inCima = [...new Set([valutaBase, ...valuteRecenti(), ...PRINCIPALI])].slice(0, 8);
-    return new Promise((resolve) => {
-      let scelta = null;
-      const scegli = (v) => { scelta = v; valutaDlg.close(); };
+    const righe = (vv, scegli) => vv.map(v => rigaScelta(voceValuta(v), corrente, scegli));
+    return sceltaIn(valutaDlg, (scegli) => {
       $("valutaTitle").textContent = titolo;
-      $("valuteTop").replaceChildren(...inCima.map(v => rigaValuta(v, corrente, scegli)));
-      $("valuteTutte").replaceChildren(...VALUTE.map(v => rigaValuta(v, corrente, scegli)));
-      valutaDlg.addEventListener("close", () => resolve(scelta), { once: true });
-      valutaDlg.showModal();
-      valutaDlg.scrollTop = 0;
-    });
+      $("valuteTop").replaceChildren(...righe(inCima, scegli));
+      $("valuteTutte").replaceChildren(...righe(VALUTE, scegli));
+    }, () => { valutaDlg.scrollTop = 0; });
   }
   $("valutaAnnulla").addEventListener("click", () => valutaDlg.close());
   impostaValuta(valutaBase);
@@ -1721,7 +1818,7 @@ body:has(.sel-bar:not([hidden])) { padding-bottom: calc(var(--sel-h, 0px) + 24px
   // ---- Finestra della spesa: nuova voce, modifica, completamento dello scontrino ----
   const spesaDlg = $("spesaDlg");
   function apriSpesa() {
-    acClose();
+    chiudiSuggerimenti();
     if (!spesaDlg.open) spesaDlg.showModal();
     spesaDlg.scrollTop = 0;
   }
@@ -1734,7 +1831,7 @@ body:has(.sel-bar:not([hidden])) { padding-bottom: calc(var(--sel-h, 0px) + 24px
   // La fa l'evento "close", qualunque sia il modo di chiudere (X, Annulla, tasto Esc, salvataggio)
   function esciSpesa() {
     fineModulo(false);
-    acClose();
+    chiudiSuggerimenti();
     resetForm(); setMsg("");
     render();
   }
@@ -1833,7 +1930,7 @@ body:has(.sel-bar:not([hidden])) { padding-bottom: calc(var(--sel-h, 0px) + 24px
       // almeno un conto resta sempre visibile
       const lab = rigaSpunta(visibili, c.id, visibili.has(c.id) && nVis === 1, [el("span", "nome", c.nome), cam, el("small", null, spese(k))], () => {
         pulisciVisibili(); saveVisibili();
-        $("f-conto").value = contoPredefinito();
+        impostaConto(contoPredefinito());
         render(); renderContiList();
       });
       const mat = btn({ className: "matita", "aria-label": `Modifica il conto ${c.nome}`, title: "Modifica o elimina" }, null, () => { contoAperto = c.id; eliminando = false; contiMsg(""); renderContiList(); const i = ul.querySelector(".conto-edit input"); if (i) { i.focus(); i.select(); } });
@@ -1845,8 +1942,8 @@ body:has(.sel-bar:not([hidden])) { padding-bottom: calc(var(--sel-h, 0px) + 24px
   // Pannello della matita: nuovo nome, oppure eliminazione (con scelta su cosa fare delle spese)
   function pannelloConto(c, k) {
     const chiudi = () => { contoAperto = null; eliminando = false; renderContiList(); };
-    // riga dei pulsanti in fondo: quelli dati, poi "Annulla"
-    const azioni = (pulsante) => el("div", "edit-azioni", pulsante, btn("link", "Annulla", chiudi));
+    // riga dei pulsanti in fondo: quelli dati, poi "Annulla" (.ghost come nelle finestre)
+    const azioni = (pulsante) => el("div", "edit-azioni", pulsante, btn("ghost", "Annulla", chiudi));
     if (!eliminando) {
       const inp = el("input", { type: "text", maxLength: 30, value: c.nome, "aria-label": "Nome del conto", autocomplete: "off" });
       const cf = el("input", { type: "checkbox", checked: !!c.foto });
@@ -1866,10 +1963,12 @@ body:has(.sel-bar:not([hidden])) { padding-bottom: calc(var(--sel-h, 0px) + 24px
         azioni(btn("danger-btn", "Elimina", () => eliminaConto(c, null))));
     }
     const altri = conti.filter(x => x.id !== c.id);
-    const sel = el("select", { "aria-label": "Conto in cui spostare le spese" }, ...altri.map(x => el("option", { value: x.id }, x.nome)));
+    const sel = el("select", { id: "spostaConto", "aria-label": "Conto in cui spostare le spese" }, ...altri.map(x => el("option", { value: x.id }, x.nome)));
+    const scegliBtn = el("button", { type: "button", id: "spostaContoBtn" });
+    tendinaConPulsante(scegliBtn, sel, "Sposta nel conto");
     return el("div", "conto-edit",
       el("p", "domanda", `«${c.nome}» ha ${spese(k)}. Cosa ne faccio?`),
-      el("div", "nuovo-conto", btn("primary", "Spostale in", () => eliminaConto(c, sel.value)), sel),
+      el("div", "nuovo-conto", btn("primary", "Spostale in", () => eliminaConto(c, sel.value)), scegliBtn, sel),
       azioni(btn("danger-btn", "Elimina anche le spese", () => eliminaConto(c, false))));
   }
 
@@ -1930,7 +2029,7 @@ body:has(.sel-bar:not([hidden])) { padding-bottom: calc(var(--sel-h, 0px) + 24px
     });
     if (!fatto) return;
     foto.forEach(f => cancellaFoto(f));
-    $("f-conto").value = contoPredefinito();
+    impostaConto(contoPredefinito());
     contoAperto = null; eliminando = false;
     contiMsg(`Conto «${c.nome}» eliminato` + (dest ? `: spese spostate in «${nomeConto(dest)}».` : dest === false ? ` insieme a ${spese(suoi.size)}.` : "."));
     render(); renderContiList();
@@ -1960,7 +2059,7 @@ body:has(.sel-bar:not([hidden])) { padding-bottom: calc(var(--sel-h, 0px) + 24px
   $("addConto").addEventListener("click", aggiungiConto);
   $("nuovoConto").addEventListener("keydown", (e) => { if (e.key === "Enter") { e.preventDefault(); aggiungiConto(); } });
   // tocco fuori dalla finestra: chiude
-  [contiDlg, $("scanDlg"), $("impDlg"), $("expDlg"), $("fotoDlg"), $("gfDlg"), $("selContoDlg"), $("selElimDlg"), $("calDlg"), $("valutaDlg"), $("selConformaDlg")].forEach(d => d.addEventListener("click", (e) => { if (e.target === d) d.close(); }));
+  [contiDlg, $("scanDlg"), $("impDlg"), $("expDlg"), $("fotoDlg"), $("gfDlg"), $("selContoDlg"), $("selElimDlg"), $("calDlg"), $("valutaDlg"), listaDlg, $("selConformaDlg")].forEach(d => d.addEventListener("click", (e) => { if (e.target === d) d.close(); }));
 
   // ---- Finestra prima della foto: (con più conti) la scelta del conto in un riquadro, sotto la casella "salva la foto" ----
   // Toccare un conto lo seleziona soltanto: si conferma con "Fatto", così un tocco sbagliato non salva nulla.
@@ -2074,10 +2173,13 @@ body:has(.sel-bar:not([hidden])) { padding-bottom: calc(var(--sel-h, 0px) + 24px
     for (let d = new Date(m); d.getMonth() === m.getMonth(); d = piuGiorni(d, 1)) celle.push(giornoCal(d, oggi));
     $("calGriglia").replaceChildren(...celle);
   }
+  // Mese e anno: pulsanti sulle tendine nascoste (tendinaConPulsante); "change" cambia il mese mostrato
+  const meseCal = tendinaConPulsante($("calMeseBtn"), $("calMese"), "Mese");
+  const annoCal = tendinaConPulsante($("calAnnoBtn"), $("calAnno"), "Anno");
   // Le frecce si fermano al primo e all'ultimo anno della tendina
   function disegnaCal() {
     const y = cal.mese.getFullYear(), m = cal.mese.getMonth(), anni = $("calAnno").options;
-    $("calMese").value = String(m); $("calAnno").value = String(y);
+    meseCal.imposta(String(m)); annoCal.imposta(String(y));
     $("calPrev").disabled = y === +anni[0].value && m === 0;
     $("calNext").disabled = y === +anni[anni.length - 1].value && m === 11;
     grigliaCal();
@@ -2411,7 +2513,6 @@ body:has(.sel-bar:not([hidden])) { padding-bottom: calc(var(--sel-h, 0px) + 24px
     }
   }
   fotoDlg.addEventListener("close", () => { fotoDi = null; $("fotoVista").replaceChildren(); });
-  $("chiudiFoto").addEventListener("click", () => fotoDlg.close());
   $("fotoChiudi").addEventListener("click", () => fotoDlg.close());
   $("fotoElimina").addEventListener("click", async () => {
     const b = $("fotoElimina");
@@ -2639,7 +2740,7 @@ body:has(.sel-bar:not([hidden])) { padding-bottom: calc(var(--sel-h, 0px) + 24px
     if (v.esercente) $("f-eserc").value = v.esercente;
     if (v.prezzoCent) $("f-prezzo").value = centsToCampo(v.prezzoCent, valutaBase);
     if (v.data) impostaData(v.data);
-    if (v.conto) $("f-conto").value = v.conto;
+    if (v.conto) impostaConto(v.conto);
     apriSpesa();
   }
 
@@ -3025,7 +3126,7 @@ body:has(.sel-bar:not([hidden])) { padding-bottom: calc(var(--sel-h, 0px) + 24px
     // Primo avvio, o conti di prima senza preferenza (presa dalla vecchia impostazione): si salva subito
     if (!salvati.length || salvati.some(c => typeof c.foto !== "boolean")) { try { await modifica(() => ({})); } catch (e) {} }
     pulisciVisibili(); saveVisibili();
-    $("f-conto").value = contoPredefinito();
+    impostaConto(contoPredefinito());
     col = localCol;
     $("scanSplit").hidden = $("scanBtn").hidden = !(Camera && OCR);
     // Ad ogni scrittura si aggiornano rows e la grafia; ridisegna chi ha scritto
