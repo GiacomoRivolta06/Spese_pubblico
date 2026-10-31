@@ -279,19 +279,32 @@ dialog.dlg::backdrop { background: rgba(10, 20, 25, .45); }
 .scelta-conti li:has(input:checked) { background: var(--accent-soft); }
 .scelta-conti label:has(input:disabled) { opacity: .5; cursor: default; }
 .scelta-nota { margin: -6px 0 0; color: var(--muted); font-size: .8rem; }
-/* Calendario per scegliere un periodo: mese con giorni lun–dom; estremi pieni, giorni in mezzo tenui, oggi col contorno */
+/* Calendario per scegliere un periodo: mese con giorni lun–dom; estremi pieni, giorni in mezzo tenui, oggi col contorno.
+   Finestra un po' più compatta delle altre; le celle restano comode da toccare (36px) */
+#calDlg { width: min(312px, calc(100% - 32px)); }
+#calDlg .dlg-body { gap: 8px; padding: 12px 12px 10px; }
+#calDlg .dlg-actions button { padding-block: 7px; }
 .cal-testa { display: flex; align-items: center; gap: 6px; }
-.cal-testa select { flex: 1 1 0; width: auto; padding: 7px 8px; }
+.cal-testa .icon-btn { width: 32px; height: 32px; flex: none; }
+.cal-testa select { flex: 1 1 0; width: auto; padding: 5px 6px; }
 .cal-testa #calAnno { flex: 0 0 5.6em; }
-.cal-griglia { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 2px; text-align: center; }
-.cal-wd { font-size: .72rem; text-transform: uppercase; color: var(--muted); font-weight: 600; padding: 2px 0 4px; }
-.cal-g { border: 0; background: none; height: 38px; border-radius: 8px; font-family: var(--f-num); font-size: .9rem; }
+.cal-griglia { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 0 2px; text-align: center; }
+.cal-wd { font-size: .7rem; text-transform: uppercase; color: var(--muted); font-weight: 600; padding: 0 0 2px; }
+.cal-g { border: 0; background: none; height: 36px; border-radius: 8px; font-family: var(--f-num); font-size: .88rem; }
 .cal-g:hover { background: var(--bg); }
 .cal-g.oggi { box-shadow: inset 0 0 0 2px var(--accent); }
 .cal-g.sel { background: var(--accent-soft); }
 .cal-g.estremo { background: var(--accent); color: var(--accent-ink); font-weight: 600; }
-.cal-info { margin: 0; font-size: .88rem; }
-.cal-link { display: flex; justify-content: space-between; gap: 8px; margin-top: -6px; }
+.cal-info { margin: 0; font-size: .86rem; }
+/* Fascia sopra Annulla/Fatto: "Oggi" a tutta larghezza; con una selezione, metà "Oggi" e metà "Annulla selezione" */
+.cal-fascia { display: flex; gap: 8px; }
+.cal-fascia button { flex: 1 1 0; min-width: 0; padding: 7px 8px; color: var(--accent); font-weight: 600; background: var(--bg); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.cal-fascia button:hover { border-color: var(--accent); }
+/* Telefoni stretti (sotto 360px): bottoni della fascia più fitti, così "Annulla selezione" si legge intero fino a 320px */
+@media (max-width: 359px) {
+  .cal-fascia { gap: 6px; }
+  .cal-fascia button { padding-inline: 4px; font-size: .86rem; }
+}
 
 /* Casella "salva la foto" sotto la scelta del conto */
 .foto-box { display: flex; align-items: center; gap: 12px; padding: 11px 12px; border: 1px solid var(--line); border-radius: 10px; background: var(--bg); cursor: pointer; user-select: none; }
@@ -631,7 +644,7 @@ body:has(.sel-bar:not([hidden])) { padding-bottom: calc(var(--sel-h, 0px) + 24px
     </div>
     <div class="cal-griglia" id="calGriglia"></div>
     <p class="cal-info" id="calInfo" role="status"></p>
-    <div class="cal-link"><button type="button" class="link" id="calOggi">Oggi</button><button type="button" class="link" id="calAzzera" hidden>Cancella selezione</button></div>
+    <div class="cal-fascia"><button type="button" class="ghost" id="calOggi">Oggi</button><button type="button" class="ghost" id="calAzzera" hidden>Annulla selezione</button></div>
     <div class="dlg-actions"><button type="button" class="ghost" id="calAnnulla">Annulla</button><button type="button" class="primary" id="calFatto">Fatto</button></div>
   </div>
 </dialog>
