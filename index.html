@@ -208,6 +208,14 @@ input:focus, select:focus { outline: none; border-color: var(--accent); box-shad
 .scan-btn small { opacity: .85; font-size: .82rem; }
 .scan-btn:hover { filter: brightness(1.08); }
 .scan-btn.busy { opacity: .6; pointer-events: none; }
+/* Un solo pulsante diviso: a sinistra la fotocamera, a destra (1/5) la galleria, separati da una linea */
+.scan-split { display: flex; border-radius: 10px; overflow: hidden; background: var(--accent); }
+.scan-split .scan-btn { border-radius: 0; }
+.scan-split .scan-btn svg { flex: none; }
+.scan-split.busy { opacity: .6; pointer-events: none; }
+.scan-gal { flex: 0 0 20%; width: auto; justify-content: center; padding: 14px 0; }
+.scan-split #scanBtn { flex: 1; width: auto; min-width: 0; }
+.scan-split .scan-gal { border-left: 1px solid var(--accent-ink); border-left: 1px solid color-mix(in srgb, var(--accent-ink) 40%, transparent); }
 .scan-btn.alt { background: var(--paper); color: var(--ink); border: 1px solid var(--line); }
 .scan-btn.alt svg { color: var(--accent); }
 .scan-btn.alt small { color: var(--muted); opacity: 1; }
@@ -408,10 +416,15 @@ body:has(.sel-bar:not([hidden])) { padding-bottom: calc(var(--sel-h, 0px) + 24px
   </section>
 
   <section class="scan" id="scan">
-    <button type="button" class="scan-btn" id="scanBtn" hidden>
-      <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" d="M4 8.5A1.5 1.5 0 0 1 5.5 7h2.2l1.4-2h5.8l1.4 2h2.2A1.5 1.5 0 0 1 20 8.5v9a1.5 1.5 0 0 1-1.5 1.5h-13A1.5 1.5 0 0 1 4 17.5z"/><circle cx="12" cy="12.8" r="3.4" fill="none" stroke="currentColor" stroke-width="1.8"/></svg>
-      <span><b>Fotografa uno scontrino</b><small>Leggo totale, data ed esercente e aggiungo la spesa</small></span>
-    </button>
+    <div class="scan-split" id="scanSplit" hidden>
+      <button type="button" class="scan-btn" id="scanBtn" hidden>
+        <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" d="M4 8.5A1.5 1.5 0 0 1 5.5 7h2.2l1.4-2h5.8l1.4 2h2.2A1.5 1.5 0 0 1 20 8.5v9a1.5 1.5 0 0 1-1.5 1.5h-13A1.5 1.5 0 0 1 4 17.5z"/><circle cx="12" cy="12.8" r="3.4" fill="none" stroke="currentColor" stroke-width="1.8"/></svg>
+        <span><b>Fotografa uno scontrino</b><small>Leggo totale, data ed esercente e aggiungo la spesa</small></span>
+      </button>
+      <button type="button" class="scan-btn scan-gal" id="galleriaBtn" aria-label="Scontrino dalla galleria" title="Dalla galleria">
+        <svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true"><rect x="4" y="5" width="16" height="14" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.8"/><circle cx="9" cy="10" r="1.6" fill="currentColor"/><path d="M4.5 17.5l5-5 3.5 3.5 2.5-2.5 4 4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg>
+      </button>
+    </div>
     <button type="button" class="scan-btn alt" id="nuovaBtn" aria-haspopup="dialog">
       <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M12 5v14M5 12h14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
       <span><b>Nuova voce spesa</b><small>Inserisci a mano tipologia, esercente e prezzo</small></span>
@@ -1635,7 +1648,7 @@ body:has(.sel-bar:not([hidden])) { padding-bottom: calc(var(--sel-h, 0px) + 24px
     box.className = "scan-status" + (err ? " err" : "");
     const t = $("scanText"); t.textContent = text || ""; t.className = "scan-text" + (busy ? " dots" : "");
     $("scanActions").replaceChildren(...actions.map(([label, fn]) => btn(null, label, fn)));
-    $("scanBtn").classList.toggle("busy", busy);
+    $("scanSplit").classList.toggle("busy", busy);
   }
 
   // ---- Interpretazione del testo di uno scontrino italiano ----
@@ -1924,7 +1937,8 @@ body:has(.sel-bar:not([hidden])) { padding-bottom: calc(var(--sel-h, 0px) + 24px
   }
 
   let scanning = false;
-  async function scanReceipt() {
+  // fonte: "CAMERA" (pulsante grande) o "PHOTOS" (galleria, a destra)
+  async function scanReceipt(fonte) {
     if (!Camera || !OCR || scanning) return;
     scanning = true;
     try {
@@ -1935,8 +1949,7 @@ body:has(.sel-bar:not([hidden])) { padding-bottom: calc(var(--sel-h, 0px) + 24px
       let photo;
       try {
         photo = await Camera.getPhoto({
-          quality: 85, resultType: "base64", source: "PROMPT", correctOrientation: true, width: 2000,
-          promptLabelHeader: "Scontrino", promptLabelPhoto: "Dalla galleria", promptLabelPicture: "Scatta una foto", promptLabelCancel: "Annulla",
+          quality: 85, resultType: "base64", source: fonte, correctOrientation: true, width: 2000,
         });
       } catch (e) { scanStatus(""); return; } // annullato dall'utente
       scanStatus("Leggo lo scontrino", { busy: true });
@@ -1999,7 +2012,8 @@ body:has(.sel-bar:not([hidden])) { padding-bottom: calc(var(--sel-h, 0px) + 24px
     apriSpesa();
   }
 
-  $("scanBtn").addEventListener("click", scanReceipt);
+  $("scanBtn").addEventListener("click", () => scanReceipt("CAMERA"));
+  $("galleriaBtn").addEventListener("click", () => scanReceipt("PHOTOS"));
 
   // ---- Selezione multipla: pressione lunga su una riga, poi azioni su tutte le spese scelte ----
   // I tocchi si ascoltano sull'elenco (render() ricrea le righe). Dopo la pressione lunga il tocco che segue
@@ -2314,7 +2328,7 @@ body:has(.sel-bar:not([hidden])) { padding-bottom: calc(var(--sel-h, 0px) + 24px
     pulisciVisibili(); saveVisibili();
     $("f-conto").value = contoPredefinito();
     col = localCol;
-    $("scanBtn").hidden = !(Camera && OCR);
+    $("scanSplit").hidden = $("scanBtn").hidden = !(Camera && OCR);
     // Ad ogni scrittura si aggiornano rows e la grafia; ridisegna chi ha scritto
     col.onSnapshot((snap) => {
       rows = snap.docs.map(d => ({ id: d.id, ...d.data() }));
