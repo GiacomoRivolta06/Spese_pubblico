@@ -73,7 +73,8 @@ h1 { font-family: var(--f-display); font-weight: 700; font-size: 1.6rem; letter-
 .month { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: -4px; }
 .period-label { flex: 1; min-width: 0; border: 0; background: none; font-weight: 600; font-size: 1.02rem; text-align: center; padding: 6px; border-radius: 8px; }
 .period-label:first-letter { text-transform: uppercase; }
-.period-label:hover { background: var(--paper); }
+.period-label:not(:disabled):hover { background: var(--paper); }
+.period-label:disabled { cursor: default; }
 /* Grafico a colonne: ogni colonna è divisa tra spese normali (azzurro, in basso) e offerte (arancio, sopra) */
 .chart { margin-top: 16px; padding-top: 12px; border-top: 1px dashed var(--line); display: flex; flex-direction: column; gap: 10px; }
 .legend { display: flex; gap: 14px; font-size: .74rem; color: var(--muted); }
@@ -278,6 +279,19 @@ dialog.dlg::backdrop { background: rgba(10, 20, 25, .45); }
 .scelta-conti li:has(input:checked) { background: var(--accent-soft); }
 .scelta-conti label:has(input:disabled) { opacity: .5; cursor: default; }
 .scelta-nota { margin: -6px 0 0; color: var(--muted); font-size: .8rem; }
+/* Calendario per scegliere un periodo: mese con giorni lun–dom; estremi pieni, giorni in mezzo tenui, oggi col contorno */
+.cal-testa { display: flex; align-items: center; gap: 6px; }
+.cal-testa select { flex: 1 1 0; width: auto; padding: 7px 8px; }
+.cal-testa #calAnno { flex: 0 0 5.6em; }
+.cal-griglia { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 2px; text-align: center; }
+.cal-wd { font-size: .72rem; text-transform: uppercase; color: var(--muted); font-weight: 600; padding: 2px 0 4px; }
+.cal-g { border: 0; background: none; height: 38px; border-radius: 8px; font-family: var(--f-num); font-size: .9rem; }
+.cal-g:hover { background: var(--bg); }
+.cal-g.oggi { box-shadow: inset 0 0 0 2px var(--accent); }
+.cal-g.sel { background: var(--accent-soft); }
+.cal-g.estremo { background: var(--accent); color: var(--accent-ink); font-weight: 600; }
+.cal-info { margin: 0; font-size: .88rem; }
+.cal-link { display: flex; justify-content: space-between; gap: 8px; margin-top: -6px; }
 
 /* Casella "salva la foto" sotto la scelta del conto */
 .foto-box { display: flex; align-items: center; gap: 12px; padding: 11px 12px; border: 1px solid var(--line); border-radius: 10px; background: var(--bg); cursor: pointer; user-select: none; }
@@ -362,7 +376,7 @@ body:has(.sel-bar:not([hidden])) { padding-bottom: calc(var(--sel-h, 0px) + 24px
 
   <div class="month">
     <button class="icon-btn" id="prev" aria-label="Periodo precedente">‹</button>
-    <button type="button" class="period-label" id="monthLabel" title="Torna al periodo attuale">—</button>
+    <button type="button" class="period-label" id="monthLabel" title="Scegli un periodo" aria-haspopup="dialog">—</button>
     <button class="icon-btn" id="next" aria-label="Periodo successivo">›</button>
   </div>
 
@@ -607,6 +621,21 @@ body:has(.sel-bar:not([hidden])) { padding-bottom: calc(var(--sel-h, 0px) + 24px
   </div>
 </dialog>
 
+<dialog class="dlg" id="calDlg" aria-label="Scegli un periodo">
+  <div class="dlg-body">
+    <div class="cal-testa">
+      <button type="button" class="icon-btn" id="calPrev" aria-label="Mese precedente">‹</button>
+      <select id="calMese" aria-label="Mese"></select>
+      <select id="calAnno" aria-label="Anno"></select>
+      <button type="button" class="icon-btn" id="calNext" aria-label="Mese successivo">›</button>
+    </div>
+    <div class="cal-griglia" id="calGriglia"></div>
+    <p class="cal-info" id="calInfo" role="status"></p>
+    <div class="cal-link"><button type="button" class="link" id="calOggi">Oggi</button><button type="button" class="link" id="calAzzera" hidden>Cancella selezione</button></div>
+    <div class="dlg-actions"><button type="button" class="ghost" id="calAnnulla">Annulla</button><button type="button" class="primary" id="calFatto">Fatto</button></div>
+  </div>
+</dialog>
+
 <script>
 // Protezione degli aggiornamenti automatici: se una nuova interfaccia non riesce a partire
 // per due avvii di fila, l'app torna da sola alla versione precedente.
@@ -692,36 +721,72 @@ body:has(.sel-bar:not([hidden])) { padding-bottom: calc(var(--sel-h, 0px) + 24px
   const vistaSalvata = lsGet("spese.view");
   if (["week", "month", "year"].includes(vistaSalvata)) view = vistaSalvata;
   let anchor = new Date(); anchor.setHours(0, 0, 0, 0);
+  // Periodo scelto con il calendario { start, end } (date iso), oppure null; non si salva.
+  // Mentre è attivo, anchor è il suo primo giorno
+  let custom = null;
 
   // Settimana da lunedì a domenica
   function weekStart(d) { const s = new Date(d); s.setDate(s.getDate() - ((s.getDay() + 6) % 7)); return s; }
-  function period() {
-    if (view === "week") {
-      const s = weekStart(anchor), e = new Date(s); e.setDate(e.getDate() + 6);
-      const sameMonth = s.getMonth() === e.getMonth();
-      const label = (sameMonth ? s.getDate() : shortFmt.format(s)) + " – " + shortFmt.format(e) + " " + e.getFullYear();
-      return { start: iso(s), end: iso(e), label, tot: "Totale della settimana", empty: "in questa settimana" };
+  const piuGiorni = (d, n) => { const x = new Date(d); x.setDate(x.getDate() + n); return x; };
+  // Quanti giorni da a a b (date iso), estremi compresi
+  const giorniTra = (a, b) => Math.round((parseDate(b) - parseDate(a)) / 864e5) + 1;
+  // "12 – 18 ott 2026", "28 set – 4 ott 2026": l'anno solo in fondo
+  function etichettaIntervallo(s, e) {
+    const stessoMese = s.getFullYear() === e.getFullYear() && s.getMonth() === e.getMonth();
+    return (stessoMese ? s.getDate() : shortFmt.format(s)) + " – " + shortFmt.format(e) + " " + e.getFullYear();
+  }
+  // Un intervallo (date iso) che tocca più di un anno mostra l'anno anche dove di solito non serve
+  const piuAnni = (a, b) => a.slice(0, 4) !== b.slice(0, 4);
+  // Nome del mese per un intervallo: "ottobre", oppure "ottobre 2026" se l'intervallo tocca più anni
+  const formatoMese = (a, b) => piuAnni(a, b) ? monthFmt : monthNameFmt;
+  // Periodo del calendario: un giorno solo "gio 15 ott 2026"; con anni diversi l'anno anche sull'inizio
+  function etichettaPeriodo(a, b) {
+    const s = parseDate(a), e = parseDate(b);
+    if (a === b) return dayFmt.format(s) + " " + s.getFullYear();
+    if (piuAnni(a, b)) return `${shortFmt.format(s)} ${s.getFullYear()} – ${shortFmt.format(e)} ${e.getFullYear()}`;
+    return etichettaIntervallo(s, e);
+  }
+  // Periodo della vista v (settimana, mese, anno) che contiene la data a
+  function periodoVista(v, a) {
+    if (v === "week") {
+      const s = weekStart(a), e = piuGiorni(s, 6);
+      return { start: iso(s), end: iso(e), label: etichettaIntervallo(s, e), tot: "Totale della settimana", empty: "in questa settimana" };
     }
-    if (view === "year") {
-      const y = anchor.getFullYear();
+    if (v === "year") {
+      const y = a.getFullYear();
       return { start: `${y}-01-01`, end: `${y}-12-31`, label: String(y), tot: "Totale dell'anno", empty: "in quest'anno" };
     }
-    const y = anchor.getFullYear(), m = anchor.getMonth();
+    const y = a.getFullYear(), m = a.getMonth();
     const last = new Date(y, m + 1, 0).getDate();
     return { start: `${y}-${pad(m + 1)}-01`, end: `${y}-${pad(m + 1)}-${pad(last)}`, label: monthFmt.format(new Date(y, m, 1)), tot: "Totale del mese", empty: "in questo mese" };
   }
+  function period() {
+    if (!custom) return periodoVista(view, anchor);
+    return { ...custom, label: etichettaPeriodo(custom.start, custom.end), tot: "Totale del periodo", empty: "in questo periodo" };
+  }
+  // Con un periodo del calendario, ‹ › lo spostano della sua stessa lunghezza
+  function spostaCustom(dir) {
+    const n = giorniTra(custom.start, custom.end) * dir;
+    const sposta = (k) => iso(piuGiorni(parseDate(k), n));
+    scegliPeriodo({ start: sposta(custom.start), end: sposta(custom.end) });
+  }
   function shift(dir) {
+    if (custom) { spostaCustom(dir); render(); return; }
     const a = new Date(anchor);
     if (view === "week") a.setDate(a.getDate() + 7 * dir);
     else if (view === "year") a.setFullYear(a.getFullYear() + dir, 0, 1);
     else a.setMonth(a.getMonth() + dir, 1);
     anchor = a; render();
   }
+  // Uscendo dal periodo del calendario si resta sul suo primo giorno (anchor)
   function setView(v) {
-    view = v;
+    view = v; custom = null;
     lsSet("spese.view", v);
     render();
   }
+  // Porta la vista sul periodo che contiene la data, uscendo dal periodo del calendario
+  function vaiAlPeriodoDi(data) { anchor = data; custom = null; }
+  function scegliPeriodo(p) { custom = p; anchor = parseDate(p.start); }
   let rows = [];          // tutte le spese {id, tipologia, esercente, prezzoCent, offerto, data}
   let col = null;         // collection ref
   let editingId = null;
@@ -825,7 +890,7 @@ body:has(.sel-bar:not([hidden])) { padding-bottom: calc(var(--sel-h, 0px) + 24px
   // Ordine dell'elenco: dalla più recente; nello stesso giorno, dall'ultima inserita
   const piuRecenti = (a, b) => (b.data || "").localeCompare(a.data || "") || (b.creato || 0) - (a.creato || 0);
   const piuVecchie = (a, b) => piuRecenti(b, a);
-  let showDates = false;  // data su ogni riga (vista anno o ricerca)
+  let showDates = false;  // data su ogni riga (vista anno, periodo del calendario o ricerca)
   let lastLabel = "";
 
   function parsePrice(s) {
@@ -856,14 +921,54 @@ body:has(.sel-bar:not([hidden])) { padding-bottom: calc(var(--sel-h, 0px) + 24px
     return m;
   }
 
+  // Colonne del grafico su [a, b] (date iso): { a, b, lab, title } per ogni colonna
+  const primaIso = (x, y) => x < y ? x : y, dopoIso = (x, y) => x > y ? x : y;
+  function colonneGiorni(a, b) {
+    const out = [];
+    for (let d = parseDate(a); iso(d) <= b; d = piuGiorni(d, 1)) out.push({ a: iso(d), b: iso(d), lab: wdFmt.format(d), title: dayFmt.format(d) });
+    return out;
+  }
+  // Settimane da lunedì a domenica, tagliate ai bordi
+  function colonneSettimane(a, b) {
+    const out = [];
+    for (let s = parseDate(a); iso(s) <= b;) {
+      const e = parseDate(primaIso(iso(piuGiorni(weekStart(s), 6)), b));
+      const uno = iso(s) === iso(e);
+      out.push({ a: iso(s), b: iso(e), lab: uno ? String(s.getDate()) : `${s.getDate()}–${e.getDate()}`,
+        title: uno ? shortFmt.format(s) : `${shortFmt.format(s)} – ${shortFmt.format(e)}` });
+      s = piuGiorni(e, 1);
+    }
+    return out;
+  }
+  // Mesi, tagliati ai bordi; nel titolo l'anno solo se l'intervallo ne tocca più d'uno
+  function colonneMesi(a, b) {
+    const out = [], titolo = formatoMese(a, b);
+    for (let d = parseDate(a.slice(0, 7) + "-01"); iso(d) <= b; d = new Date(d.getFullYear(), d.getMonth() + 1, 1)) {
+      const fine = iso(new Date(d.getFullYear(), d.getMonth() + 1, 0));
+      out.push({ a: dopoIso(iso(d), a), b: primaIso(fine, b), lab: monthShortFmt.format(d), title: titolo.format(d) });
+    }
+    return out;
+  }
+  // Tipi di colonna con la loro larghezza massima (--bw)
+  const GIORNI = { fn: colonneGiorni, bw: "22px" }, SETTIMANE = { fn: colonneSettimane, bw: "40px" }, MESI = { fn: colonneMesi, bw: "22px" };
+  // Settimana: giorni; mese: settimane; anno: mesi. Periodo del calendario: secondo la lunghezza
+  const COLONNE_VISTA = { week: GIORNI, month: SETTIMANE, year: MESI };
+  function colonneDelPeriodo(P) {
+    if (!custom) return COLONNE_VISTA[view];
+    const n = giorniTra(P.start, P.end);
+    return n <= 7 ? GIORNI : n <= 92 ? SETTIMANE : MESI;
+  }
+  // oltre 24 colonne (solo con i mesi: periodi che toccano più di 24 mesi di calendario) il grafico non si mostra
+  const MAX_COLONNE = 24;
+
   function render() {
     const P = period();
     const q = norm($("q").value.trim());
     const searching = q.length > 0;
-    showDates = view === "year" || searching;
+    showDates = !!custom || view === "year" || searching;
     $("monthLabel").textContent = searching ? "Ricerca in tutte le date" : P.label;
-    $("prev").disabled = $("next").disabled = searching;
-    document.querySelectorAll(".seg button").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.view === view)));
+    $("prev").disabled = $("next").disabled = $("monthLabel").disabled = searching;
+    document.querySelectorAll(".seg button").forEach(b => b.setAttribute("aria-pressed", String(!custom && b.dataset.view === view)));
     aggiornaConti();
     const all = rows.filter(r => visibili.has(contoOf(r)) && nelFiltro(r, P, q)).sort(piuRecenti);
     const inMonth = all.filter(r => !hidden.has(tipoKey(r)));
@@ -886,37 +991,18 @@ body:has(.sel-bar:not([hidden])) { padding-bottom: calc(var(--sel-h, 0px) + 24px
     // Ogni colonna somma le spese normali (azzurro) e quelle offerte (arancio, sopra).
     const cols = $("cols"), chart = $("chart");
     cols.replaceChildren();
-    chart.hidden = searching || !inMonth.length;
+    const colonneFn = colonneDelPeriodo(P);
+    const intervalliColonne = searching ? [] : colonneFn.fn(P.start, P.end);
+    chart.hidden = searching || !inMonth.length || intervalliColonne.length > MAX_COLONNE;
     $("legend").hidden = chart.hidden || gift === 0;
     if (!chart.hidden) {
-      const buckets = [];
       const todayIso = today();
       const sumIn = (a, b) => somme(inMonth.filter(r => r.data >= a && r.data <= b));
-      if (view === "week") {
-        const s = weekStart(anchor);
-        for (let i = 0; i < 7; i++) { const d = new Date(s); d.setDate(d.getDate() + i); const k = iso(d);
-          buckets.push({ lab: wdFmt.format(d), title: dayFmt.format(d), now: k === todayIso, ...sumIn(k, k) }); }
-      } else if (view === "month") {
-        // Settimane da lunedì a domenica, tagliate ai giorni del mese
-        const y = anchor.getFullYear(), m = anchor.getMonth(), last = new Date(y, m + 1, 0).getDate();
-        let d = 1;
-        while (d <= last) {
-          const s = new Date(y, m, d);
-          const e = Math.min(last, d + (6 - ((s.getDay() + 6) % 7)));
-          const a = iso(s), b = iso(new Date(y, m, e));
-          buckets.push({ lab: d === e ? String(d) : `${d}–${e}`, title: d === e ? shortFmt.format(s) : `${shortFmt.format(s)} – ${shortFmt.format(new Date(y, m, e))}`,
-            now: todayIso >= a && todayIso <= b, ...sumIn(a, b) });
-          d = e + 1;
-        }
-      } else {
-        const y = anchor.getFullYear();
-        for (let m = 0; m < 12; m++) { const d = new Date(y, m, 1); const a = iso(d), b = iso(new Date(y, m + 1, 0));
-          buckets.push({ lab: monthShortFmt.format(d), title: monthNameFmt.format(d), now: todayIso >= a && todayIso <= b, ...sumIn(a, b) }); }
-      }
+      const buckets = intervalliColonne.map(c => ({ ...c, now: todayIso >= c.a && todayIso <= c.b, ...sumIn(c.a, c.b) }));
       const H = 64;
       const mx = Math.max(1, ...buckets.map(b => b.v + b.g));
       cols.style.setProperty("--n", buckets.length);
-      cols.style.setProperty("--bw", view === "month" ? "40px" : "22px");
+      cols.style.setProperty("--bw", colonneFn.bw);
       buckets.forEach(b => {
         const bar = el("div", "col-bar");
         const tot = b.v + b.g;
@@ -972,10 +1058,13 @@ body:has(.sel-bar:not([hidden])) { padding-bottom: calc(var(--sel-h, 0px) + 24px
       else if (searching) list.append(vuoto(`Nessun risultato per "${$("q").value.trim()}"`, "Prova con un'altra parola."));
       else list.append(vuoto(`Nessuna spesa ${P.empty}`, "Aggiungi una voce con il modulo qui sopra."));
     } else {
-      // con le date su ogni riga si raggruppa per mese, altrimenti per giorno
+      // anno, ricerca e periodi del calendario oltre 31 giorni si raggruppano per mese, il resto per giorno;
+      // l'anno nel titolo del mese solo se l'elenco ne tocca più d'uno
       const conConto = multiVisibili();
-      raggruppa(inMonth, r => showDates ? r.data.slice(0, 7) : r.data).forEach((items, d) => {
-        const titolo = showDates ? (searching ? monthFmt : monthNameFmt).format(parseDate(d + "-01")) : dayFmt.format(parseDate(d));
+      const perMese = searching || (custom ? giorniTra(P.start, P.end) > 31 : view === "year");
+      const meseFmt = searching ? monthFmt : formatoMese(P.start, P.end);
+      raggruppa(inMonth, r => perMese ? r.data.slice(0, 7) : r.data).forEach((items, d) => {
+        const titolo = perMese ? meseFmt.format(parseDate(d + "-01")) : dayFmt.format(parseDate(d));
         const totale = euro(somme(items).v);
         list.append(el("div", "day",
           el("h3", null, el("span", null, titolo), el("span", "num", totale)),
@@ -1202,7 +1291,7 @@ body:has(.sel-bar:not([hidden])) { padding-bottom: calc(var(--sel-h, 0px) + 24px
         lsSet("spese.ultimoConto", conto);
         esito((visibili.has(conto) ? "Spesa aggiunta." : `Spesa aggiunta nel conto «${nomeConto(conto)}», che non stai guardando.`) + (fotoErr ? " La foto dello scontrino non è stata salvata." : ""), fotoErr);
       }
-      anchor = parseDate(data);
+      vaiAlPeriodoDi(parseDate(data));
       // "close" arriva un attimo dopo: il riepilogo deve essere già aggiornato insieme al messaggio
       chiudiSpesa(); esciSpesa();
     } catch (e) {
@@ -1215,7 +1304,7 @@ body:has(.sel-bar:not([hidden])) { padding-bottom: calc(var(--sel-h, 0px) + 24px
   $("q").addEventListener("keydown", (e) => { if (e.key === "Escape" && $("q").value) { $("q").value = ""; render(); } });
   $("prev").addEventListener("click", () => shift(-1));
   $("next").addEventListener("click", () => shift(1));
-  $("monthLabel").addEventListener("click", () => { anchor = new Date(); anchor.setHours(0, 0, 0, 0); render(); });
+  $("monthLabel").addEventListener("click", apriCalendario);
   document.querySelectorAll(".seg button").forEach(b => b.addEventListener("click", () => setView(b.dataset.view)));
 
   // ---- Finestra dei conti: quali vedere, aggiungerne di nuovi ----
@@ -1375,7 +1464,7 @@ body:has(.sel-bar:not([hidden])) { padding-bottom: calc(var(--sel-h, 0px) + 24px
   $("addConto").addEventListener("click", aggiungiConto);
   $("nuovoConto").addEventListener("keydown", (e) => { if (e.key === "Enter") { e.preventDefault(); aggiungiConto(); } });
   // tocco fuori dalla finestra: chiude
-  [contiDlg, $("scanDlg"), $("impDlg"), $("expDlg"), $("fotoDlg"), $("gfDlg"), $("selContoDlg"), $("selElimDlg")].forEach(d => d.addEventListener("click", (e) => { if (e.target === d) d.close(); }));
+  [contiDlg, $("scanDlg"), $("impDlg"), $("expDlg"), $("fotoDlg"), $("gfDlg"), $("selContoDlg"), $("selElimDlg"), $("calDlg")].forEach(d => d.addEventListener("click", (e) => { if (e.target === d) d.close(); }));
 
   // ---- Finestra prima della foto: (con più conti) la scelta del conto in un riquadro, sotto la casella "salva la foto" ----
   // Toccare un conto lo seleziona soltanto: si conferma con "Fatto", così un tocco sbagliato non salva nulla.
@@ -1433,6 +1522,98 @@ body:has(.sel-bar:not([hidden])) { padding-bottom: calc(var(--sel-h, 0px) + 24px
     const risposta = () => ({ conto: piu ? box.querySelector("input:checked").value : baseId(), foto: casella.checked });
     return chiedi($("scanDlg"), "scanFatto", "scanDlgAnnulla", risposta, misura);
   }
+
+  // ---- Calendario: toccando l'etichetta del periodo si sceglie un periodo da data a data ----
+  // Senza una scelta, "Fatto" porta la vista (settimana, mese o anno) sul mese mostrato.
+  // cal.mese: primo giorno del mese mostrato; cal.sel: { start, end } o null; cal.attendeFine: manca ancora l'ultimo giorno
+  const calDlg = $("calDlg");
+  const ANNO_MIN = 2000, annoMax = () => new Date().getFullYear() + 5;
+  const cal = { mese: null, sel: null, attendeFine: false };
+  const mostraMese = (d) => { cal.mese = new Date(d.getFullYear(), d.getMonth(), 1); };
+  // Nomi dei mesi nella tendina: una volta sola
+  function riempiTendineCal() {
+    $("calMese").replaceChildren(...[...Array(12)].map((_, i) => el("option", { value: String(i) }, monthNameFmt.format(new Date(2000, i, 1)))));
+  }
+  // Anni nella tendina: dal 2000 all'anno corrente + 5, allargati fino all'anno y se è fuori
+  function anniCal(y) {
+    const da = Math.min(ANNO_MIN, y), a = Math.max(annoMax(), y);
+    $("calAnno").replaceChildren(...[...Array(a - da + 1)].map((_, i) => el("option", { value: String(da + i) }, String(da + i))));
+  }
+  // Il mese mostrato appartiene già al periodo P (per la settimana: è il mese in cui inizia)
+  function meseNelPeriodo(P) {
+    const k = iso(cal.mese).slice(0, 7);
+    return view === "week" ? P.start.slice(0, 7) === k : P.start.slice(0, 7) <= k && k <= P.end.slice(0, 7);
+  }
+  // Data su cui "Fatto" senza scelta porta la vista (settimana: il primo lunedì del mese); null = resta tutto com'è
+  function dataPerFatto() {
+    if (!custom && meseNelPeriodo(period())) return null;
+    return view === "week" ? weekStart(piuGiorni(cal.mese, 6)) : cal.mese;
+  }
+  function infoCalendario() {
+    if (cal.sel) return etichettaPeriodo(cal.sel.start, cal.sel.end) + (cal.attendeFine ? " · tocca l'ultimo giorno" : "");
+    const d = dataPerFatto();
+    return "Fatto mostra: " + (d ? periodoVista(view, d).label : period().label);
+  }
+  function giornoCal(d, oggi) {
+    const k = iso(d), s = cal.sel;
+    const dentro = !!s && k >= s.start && k <= s.end, estremo = !!s && (k === s.start || k === s.end);
+    const classi = ["cal-g", k === oggi && "oggi", dentro && "sel", estremo && "estremo"].filter(Boolean).join(" ");
+    return btn({ className: classi, "data-giorno": k, "aria-pressed": String(dentro), "aria-label": `${dayFmt.format(d)} ${d.getFullYear()}` },
+      String(d.getDate()), () => toccaGiorno(k));
+  }
+  // Intestazione lun–dom, celle vuote fino al primo giorno, poi i giorni del mese
+  function grigliaCal() {
+    const m = cal.mese, lun = weekStart(m), oggi = today();
+    const celle = [...Array(7)].map((_, i) => el("span", "cal-wd", wdFmt.format(piuGiorni(lun, i))));
+    for (let i = (m.getDay() + 6) % 7; i > 0; i--) celle.push(el("span"));
+    for (let d = new Date(m); d.getMonth() === m.getMonth(); d = piuGiorni(d, 1)) celle.push(giornoCal(d, oggi));
+    $("calGriglia").replaceChildren(...celle);
+  }
+  // Le frecce si fermano al primo e all'ultimo anno della tendina
+  function disegnaCal() {
+    const y = cal.mese.getFullYear(), m = cal.mese.getMonth(), anni = $("calAnno").options;
+    $("calMese").value = String(m); $("calAnno").value = String(y);
+    $("calPrev").disabled = y === +anni[0].value && m === 0;
+    $("calNext").disabled = y === +anni[anni.length - 1].value && m === 11;
+    grigliaCal();
+    $("calInfo").textContent = infoCalendario();
+    $("calAzzera").hidden = !cal.sel;
+  }
+  // Primo tocco: periodo di un giorno; secondo: chiude il periodo (gli estremi si scambiano se serve); terzo: ricomincia
+  function toccaGiorno(k) {
+    if (cal.attendeFine) cal.sel = k < cal.sel.start ? { start: k, end: cal.sel.start } : { start: cal.sel.start, end: k };
+    else cal.sel = { start: k, end: k };
+    cal.attendeFine = !cal.attendeFine;
+    disegnaCal();
+    $("calGriglia").querySelector(`[data-giorno="${k}"]`).focus();
+  }
+  // Risposta di Fatto: il periodo scelto, la data su cui portare la vista, oppure null (niente da fare)
+  function rispostaCal() {
+    if (cal.sel) return { custom: cal.sel };
+    const d = dataPerFatto();
+    return d ? { data: d } : null;
+  }
+  function apriCalendario() {
+    cal.sel = custom ? { ...custom } : null; cal.attendeFine = false;
+    // periodo del calendario: il mese del suo inizio; settimana: il mese in cui inizia; mese e anno: il mese dell'ancora
+    mostraMese(view === "year" && !custom ? anchor : parseDate(period().start));
+    anniCal(cal.mese.getFullYear());
+    disegnaCal();
+    chiedi(calDlg, "calFatto", "calAnnulla", rispostaCal).then(applicaCalendario);
+  }
+  // null: Annulla, Esc, tocco fuori, Indietro, oppure Fatto senza nulla da cambiare
+  function applicaCalendario(r) {
+    if (!r) return;
+    if (r.custom) scegliPeriodo(r.custom); else vaiAlPeriodoDi(r.data);
+    render();
+  }
+  riempiTendineCal();
+  const calVai = (n) => { mostraMese(new Date(cal.mese.getFullYear(), cal.mese.getMonth() + n, 1)); disegnaCal(); };
+  $("calPrev").addEventListener("click", () => calVai(-1));
+  $("calNext").addEventListener("click", () => calVai(1));
+  $("calOggi").addEventListener("click", () => { mostraMese(new Date()); disegnaCal(); });
+  $("calAzzera").addEventListener("click", () => { cal.sel = null; cal.attendeFine = false; disegnaCal(); $("calOggi").focus(); });
+  ["calMese", "calAnno"].forEach(id => $(id).addEventListener("change", () => { mostraMese(new Date(+$("calAnno").value, +$("calMese").value, 1)); disegnaCal(); }));
 
   // ---- Scansione scontrino ----
   function scanStatus(text, { busy = false, err = false, actions = [] } = {}) {
@@ -1772,7 +1953,7 @@ body:has(.sel-bar:not([hidden])) { padding-bottom: calc(var(--sel-h, 0px) + 24px
       const ref = await col.add(full);
       lsSet("spese.ultimoConto", conto);
       freshId = ref.id;
-      anchor = parseDate(full.data);
+      vaiAlPeriodoDi(parseDate(full.data));
       render();
       const saved = { id: ref.id, ...full };
       const dove = multiConti() ? ` · in «${nomeConto(conto)}»${visibili.has(conto) ? "" : " (conto che non stai guardando)"}` : "";
