@@ -30,13 +30,21 @@
   --f-body: "Figtree", system-ui, -apple-system, "Segoe UI", sans-serif;
   --f-num: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, monospace;
 }
+/* Tema scuro: segue il telefono, salvo una scelta in Impostazioni (data-theme="dark" | "light" su <html>).
+   Le due tavolozze scure qui sotto vanno tenute uguali */
 @media (prefers-color-scheme: dark) {
-  :root {
+  :root:not([data-theme="light"]) {
     --bg: #0f1619; --paper: #172126; --ink: #e4ecef; --muted: #93a5ad; --line: #2a3a41;
     --accent: #6fb8cf; --accent-ink: #0c1b21; --accent-soft: #1d3540;
     --gift: #f0b45a; --gift-soft: #3a2a12; --danger: #f2877f; color-scheme: dark;
   }
 }
+:root[data-theme="dark"] {
+  --bg: #0f1619; --paper: #172126; --ink: #e4ecef; --muted: #93a5ad; --line: #2a3a41;
+  --accent: #6fb8cf; --accent-ink: #0c1b21; --accent-soft: #1d3540;
+  --gift: #f0b45a; --gift-soft: #3a2a12; --danger: #f2877f; color-scheme: dark;
+}
+:root[data-theme="light"] { color-scheme: light; }
 * { box-sizing: border-box; }
 html { -webkit-text-size-adjust: 100%; }
 [hidden] { display: none !important; }
@@ -335,6 +343,14 @@ dialog.dlg-imp { width: min(460px, calc(100% - 24px)); }
 .agg-esito { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; font-size: .86rem; }
 .agg-esito:empty { display: none; }
 .agg-esito.err { color: var(--danger); }
+/* Interruttore a scorrimento (checkbox con role="switch"): acceso = pallino a destra sul colore principale */
+.interruttore { display: flex; align-items: center; justify-content: space-between; gap: 12px; font-size: .9rem; font-weight: 600; cursor: pointer; user-select: none; }
+.interruttore input { -webkit-appearance: none; appearance: none; flex: none; position: relative; width: 44px; height: 26px; margin: 0; border-radius: 13px; background: var(--line); cursor: pointer; transition: background-color .15s; }
+.interruttore input::before { content: ""; position: absolute; top: 3px; left: 3px; width: 20px; height: 20px; border-radius: 50%; background: #ffffff; box-shadow: 0 1px 2px rgba(0,0,0,.3); transition: transform .15s; }
+.interruttore input:checked { background: var(--accent); }
+.interruttore input:checked::before { transform: translateX(18px); }
+@media (prefers-reduced-motion: reduce) { .interruttore input, .interruttore input::before { transition: none; } }
+.imp-sez .link { align-self: flex-start; font-size: .82rem; }
 
 /* Foto dello scontrino */
 .chip.foto { display: inline-flex; align-items: center; gap: 4px; background: var(--bg); color: var(--ink); border: 1px solid var(--line); }
@@ -545,6 +561,12 @@ body:has(.sel-bar:not([hidden])) { padding-bottom: calc(var(--sel-h, 0px) + 24px
       <span class="form-msg" id="backupMsg" role="status"></span>
     </section>
 
+    <section class="imp-sez" aria-labelledby="impAspetto">
+      <h3 id="impAspetto">Aspetto</h3>
+      <label class="interruttore"><span>Tema scuro</span><input type="checkbox" role="switch" id="temaScuro"></label>
+      <button type="button" class="link" id="temaSistema" hidden>Usa il tema del telefono</button>
+    </section>
+
     <section class="imp-sez" aria-labelledby="impApp">
       <h3 id="impApp">App</h3>
       <div class="ver-riga">
@@ -687,6 +709,15 @@ body:has(.sel-bar:not([hidden])) { padding-bottom: calc(var(--sel-h, 0px) + 24px
   } catch (e) {}
 })();
 </script>
+<script>
+// Tema scelto in Impostazioni (spese.tema): si applica prima che la pagina si disegni, per non mostrare il tema sbagliato
+(function () {
+  try {
+    var t = window.localStorage.getItem("spese.tema");
+    if (t === "dark" || t === "light") document.documentElement.setAttribute("data-theme", t);
+  } catch (e) {}
+})();
+</script>
 <script src="xlsx.full.min.js"></script>
 <script>
 (() => {
@@ -728,6 +759,14 @@ body:has(.sel-bar:not([hidden])) { padding-bottom: calc(var(--sel-h, 0px) + 24px
   const lsSet = (k, v) => { try { if (v == null) localStorage.removeItem(k); else localStorage.setItem(k, v); } catch (e) {} };
   const lsJson = (k) => { try { return JSON.parse(lsGet(k) || "null"); } catch (e) { return null; } };
   const lsLista = (k) => { const v = lsJson(k); return Array.isArray(v) ? v : []; };
+  // Tema: "dark" | "light" scelto in Impostazioni (spese.tema), null = segue il telefono.
+  // All'avvio data-theme lo mette già il secondo <script>; qui si cambia al tocco, con la barra di stato
+  const temaSalvato = () => { const t = lsGet("spese.tema"); return t === "dark" || t === "light" ? t : null; };
+  function applicaTema(scelta) {
+    if (scelta) document.documentElement.setAttribute("data-theme", scelta);
+    else document.documentElement.removeAttribute("data-theme");
+    barraDiStato(scelta);
+  }
   const DEFAULT_TIPI = ["Alimentari", "Ristorante", "Bar", "Trasporti", "Carburante", "Casa", "Abbigliamento", "Svago", "Farmacia", "Regali"];
   const fmt = new Intl.NumberFormat("it-IT", { style: "currency", currency: "EUR" });
   const euro = (cents) => fmt.format((cents || 0) / 100);
@@ -1264,9 +1303,14 @@ body:has(.sel-bar:not([hidden])) { padding-bottom: calc(var(--sel-h, 0px) + 24px
     spesaDlg.scrollTop = 0;
   }
   function chiudiSpesa() { if (spesaDlg.open) spesaDlg.close(); }
+  // Chi aspetta l'esito del modulo aperto da uno scontrino letto a metà (file condivisi): true = spesa aggiunta
+  let esitoModulo = null;
+  const attendiModulo = () => new Promise((resolve) => { esitoModulo = resolve; });
+  function fineModulo(aggiunta) { const f = esitoModulo; esitoModulo = null; if (f) f(aggiunta); }
   // Uscita dalla finestra: si svuota il modulo e si ridisegna.
   // La fa l'evento "close", qualunque sia il modo di chiudere (X, Annulla, tasto Esc, salvataggio)
   function esciSpesa() {
+    fineModulo(false);
     acClose();
     resetForm(); setMsg("");
     render();
@@ -1315,6 +1359,7 @@ body:has(.sel-bar:not([hidden])) { padding-bottom: calc(var(--sel-h, 0px) + 24px
         if (fotoInAttesa) { foto = await salvaFoto(fotoInAttesa); fotoErr = !foto; }
         await col.add({ tipologia, esercente, prezzoCent, data, offerto, nota, conto, creato: Date.now(), ...foto ? { foto, daScontrino: true } : {} });
         lsSet("spese.ultimoConto", conto);
+        fineModulo(true);
         esito((visibili.has(conto) ? "Spesa aggiunta." : `Spesa aggiunta nel conto «${nomeConto(conto)}», che non stai guardando.`) + (fotoErr ? " La foto dello scontrino non è stata salvata." : ""), fotoErr);
       }
       vaiAlPeriodoDi(parseDate(data));
@@ -1498,6 +1543,11 @@ body:has(.sel-bar:not([hidden])) { padding-bottom: calc(var(--sel-h, 0px) + 24px
   // Con un solo conto c'è solo la casella e "Fatto". Risponde { conto, foto } oppure null se annullato
   // Finestra che risponde con una promessa: il pulsante ok la chiude con risposta(),
   // annulla (o Esc, o un tocco fuori) con null. aperta(): misure da prendere a finestra aperta
+  // L'ultima finestra aperta (quella in primo piano), oppure null
+  function finestraAperta() {
+    const aperte = document.querySelectorAll("dialog[open]");
+    return aperte[aperte.length - 1] || null;
+  }
   function chiedi(d, ok, annulla, risposta, aperta) {
     return new Promise((resolve) => {
       let valore = null;
@@ -1945,61 +1995,174 @@ body:has(.sel-bar:not([hidden])) { padding-bottom: calc(var(--sel-h, 0px) + 24px
       // Con più conti si sceglie prima dove mettere lo scontrino
       const scelta = await chiediConto();
       if (!scelta) { scanStatus(""); return; }
-      const { conto, foto: vuoleFoto } = scelta;
       let photo;
       try {
         photo = await Camera.getPhoto({
           quality: 85, resultType: "base64", source: fonte, correctOrientation: true, width: 2000,
         });
       } catch (e) { scanStatus(""); return; } // annullato dall'utente
-      scanStatus("Leggo lo scontrino", { busy: true });
-      const res = await OCR.detectText({ base64Image: photo.base64String, rotation: 0 });
-      const text = linesFromOcr(res);
-      const p = parseReceipt(text, today());
-      const voce = {
-        tipologia: guessTipologia(p.esercente, text, rows),
-        esercente: p.esercente,
-        prezzoCent: p.prezzoCent,
-        data: p.data || today(),
-        conto,
-      };
-      // Foto da conservare: rimpicciolita, per non riempire il telefono
-      let fotoB64 = null;
-      if (vuoleFoto) { try { fotoB64 = await comprimiFoto(photo.base64String, photo.format); } catch (e) {} }
-      if (!p.prezzoCent || !p.sicuro || !p.esercente) {
-        fillForm(voce);
-        if (fotoB64) { fotoInAttesa = fotoB64; $("formFoto").hidden = false; }
-        scanStatus(p.prezzoCent
-          ? "Ho compilato il modulo con quello che ho letto. Controlla i campi e premi Aggiungi."
-          : "Non ho trovato il totale. Ho compilato quello che ho letto: completa il modulo e premi Aggiungi.");
-        return;
-      }
-      const foto = fotoB64 ? await salvaFoto(fotoB64) : null;
-      const full = { ...voce, offerto: false, creato: Date.now(), daScontrino: true, ...foto ? { foto } : {} };
-      const ref = await col.add(full);
-      lsSet("spese.ultimoConto", conto);
-      freshId = ref.id;
-      vaiAlPeriodoDi(parseDate(full.data));
-      render();
-      const saved = { id: ref.id, ...full };
-      const dove = multiConti() ? ` · in «${nomeConto(conto)}»${visibili.has(conto) ? "" : " (conto che non stai guardando)"}` : "";
-      const nf = !vuoleFoto ? "" : foto ? " · foto salvata" : " · foto non salvata";
-      scanStatus(`Aggiunta: ${full.esercente} · ${euro(full.prezzoCent)} · ${dayFmt.format(parseDate(full.data))}${p.data ? "" : " (data di oggi)"}${dove}${nf}`, {
-        actions: [
-          ["Modifica", () => { scanStatus(""); startEdit(saved); }],
-          ["Annulla", async () => {
-            try { await col.doc(ref.id).delete(); freshId = null; render(); scanStatus("Spesa annullata."); }
-            catch (e) { scanStatus("Annullamento non riuscito. Elimina la voce dall'elenco.", { err: true }); }
-          }],
-        ],
-      });
+      await leggiScontrino(photo.base64String, photo.format, scelta);
     } catch (e) {
-      const msg = String((e && e.message) || "");
-      if (/download|module|model/i.test(msg)) scanStatus("Il lettore di testo si sta ancora scaricando sul telefono. Riprova tra un minuto (serve internet la prima volta).", { err: true });
-      else scanStatus("Lettura non riuscita. Riprova con una foto più nitida, oppure inserisci la spesa a mano.", { err: true });
+      erroreLettura(e);
     } finally {
       scanning = false;
+      fineLavoro();
     }
+  }
+
+  // Legge lo scontrino (una foto, oppure le pagine di un PDF in ordine: il testo si unisce in un'unica lettura)
+  // e aggiunge la spesa; se l'ha letto a metà apre il modulo precompilato. Come foto si conserva la prima pagina.
+  // nota: frase in coda all'esito. Risponde "aggiunta" o "modulo"; un errore del lettore arriva a chi chiama
+  async function leggiScontrino(base64, formato, scelta, nota = "") {
+    const pagine = [].concat(base64);
+    const { conto, foto: vuoleFoto } = scelta;
+    scanStatus("Leggo lo scontrino", { busy: true });
+    const testi = [];
+    for (const pag of pagine) testi.push(linesFromOcr(await OCR.detectText({ base64Image: pag, rotation: 0 })));
+    const text = testi.join("\n");
+    const p = parseReceipt(text, today());
+    const voce = {
+      tipologia: guessTipologia(p.esercente, text, rows),
+      esercente: p.esercente,
+      prezzoCent: p.prezzoCent,
+      data: p.data || today(),
+      conto,
+    };
+    // Foto da conservare: rimpicciolita, per non riempire il telefono
+    let fotoB64 = null;
+    if (vuoleFoto) { try { fotoB64 = await comprimiFoto(pagine[0], formato); } catch (e) {} }
+    if (!p.prezzoCent || !p.sicuro || !p.esercente) {
+      fillForm(voce);
+      if (fotoB64) { fotoInAttesa = fotoB64; $("formFoto").hidden = false; }
+      scanStatus((p.prezzoCent
+        ? "Ho compilato il modulo con quello che ho letto. Controlla i campi e premi Aggiungi."
+        : "Non ho trovato il totale. Ho compilato quello che ho letto: completa il modulo e premi Aggiungi.") + (nota ? " " + nota : ""));
+      return "modulo";
+    }
+    const foto = fotoB64 ? await salvaFoto(fotoB64) : null;
+    const full = { ...voce, offerto: false, creato: Date.now(), daScontrino: true, ...foto ? { foto } : {} };
+    const ref = await col.add(full);
+    lsSet("spese.ultimoConto", conto);
+    freshId = ref.id;
+    vaiAlPeriodoDi(parseDate(full.data));
+    render();
+    const saved = { id: ref.id, ...full };
+    const dove = multiConti() ? ` · in «${nomeConto(conto)}»${visibili.has(conto) ? "" : " (conto che non stai guardando)"}` : "";
+    const nf = !vuoleFoto ? "" : foto ? " · foto salvata" : " · foto non salvata";
+    scanStatus(`Aggiunta: ${full.esercente} · ${euro(full.prezzoCent)} · ${dayFmt.format(parseDate(full.data))}${p.data ? "" : " (data di oggi)"}${dove}${nf}${nota ? ". " + nota : ""}`, {
+      actions: [
+        ["Modifica", () => { scanStatus(""); startEdit(saved); }],
+        ["Annulla", async () => {
+          try { await col.doc(ref.id).delete(); freshId = null; render(); scanStatus("Spesa annullata."); }
+          catch (e) { scanStatus("Annullamento non riuscito. Elimina la voce dall'elenco.", { err: true }); }
+        }],
+      ],
+    });
+    return "aggiunta";
+  }
+
+  function erroreLettura(e) {
+    const msg = String((e && e.message) || "");
+    if (/download|module|model/i.test(msg)) scanStatus("Il lettore di testo si sta ancora scaricando sul telefono. Riprova tra un minuto (serve internet la prima volta).", { err: true });
+    else scanStatus("Lettura non riuscita. Riprova con una foto più nitida, oppure inserisci la spesa a mano.", { err: true });
+  }
+
+  // ---- File condivisi da altre app (galleria, Gmail, File): «Condividi → Spese» (plugin Condivisione) ----
+  // Ogni condivisione è un gruppo di file (al massimo 10). La finestra del conto si mostra una volta per il gruppo,
+  // poi i file si leggono uno alla volta e ognuno diventa una voce; uno letto a metà apre il modulo e il successivo
+  // aspetta che si chiuda. I gruppi aspettano finché c'è una finestra aperta o un lavoro in corso; la selezione si chiude.
+  // Il plugin dà le pagine come JPEG (un PDF: al massimo le prime 3) e rifiuta con il codice NON_SUPPORTATO o ILLEGGIBILE.
+  // Negli APK senza il plugin non succede nulla.
+  const COND = isNative ? plugin("Condivisione") : null;
+  const MAX_CONDIVISI = 10, MAX_PAGINE = 3;
+  const gruppiCondivisi = [];
+  let importando = false;
+  const liberaCondiviso = (f) => { try { Promise.resolve(COND.libera({ id: f.id })).catch(() => {}); } catch (e) {} };
+  const occupato = () => scanning || selBusy || !!finestraAperta();
+  const chiusa = (d) => new Promise((resolve) => d.addEventListener("close", resolve, { once: true }));
+
+  async function prendiCondivisi() {
+    let r = null;
+    try { r = await COND.ricevuti(); } catch (e) { return; }
+    const file = r && Array.isArray(r.file) ? r.file : [];
+    if (!file.length) return;
+    gruppiCondivisi.push(file);
+    smaltisciCondivisi();
+  }
+  // Fine di un lavoro (scansione, importazione, azione sulla selezione) o chiusura di una finestra:
+  // la coda riparte appena chi ha finito ha ripreso il suo corso
+  function fineLavoro() { if (gruppiCondivisi.length) setTimeout(smaltisciCondivisi, 0); }
+  // Parte il primo gruppo in attesa, se non c'è nulla in corso (un gruppo alla volta)
+  function smaltisciCondivisi() {
+    if (importando || !gruppiCondivisi.length || occupato()) return;
+    if (selezione.size) esciSelezione();
+    importando = true;
+    importaGruppo(gruppiCondivisi.shift()).finally(() => { importando = false; fineLavoro(); });
+  }
+  async function importaGruppo(file) {
+    scanning = true;
+    try {
+      const pronto = await preparaGruppo(file);
+      if (pronto) await leggiGruppo(pronto);
+    } finally { scanning = false; }
+  }
+  // Scarta i file oltre il decimo e chiede il conto (una volta per tutto il gruppo); null se annullato
+  async function preparaGruppo(file) {
+    const gruppo = file.slice(0, MAX_CONDIVISI), scartati = file.slice(MAX_CONDIVISI);
+    scartati.forEach(liberaCondiviso);
+    const scelta = await chiediConto();
+    if (!scelta) { gruppo.forEach(liberaCondiviso); scanStatus(""); return null; }
+    return { gruppo, scelta, scartati: scartati.length };
+  }
+  // Un file alla volta; con più file, alla fine l'esito riassuntivo (con un file resta il suo esito)
+  async function leggiGruppo({ gruppo, scelta, scartati }) {
+    const conta = { aggiunte: 0, saltati: 0, illeggibili: 0, troncati: 0 };
+    for (const f of gruppo) {
+      const r = await importaFile(f, scelta);
+      conta[r.esito]++;
+      if (r.troncato) conta.troncati++;
+    }
+    if (gruppo.length > 1) scanStatus(riassuntoCondivisi(gruppo.length, conta) + avvisoScartati(scartati));
+  }
+  // Un file: parte a finestre chiuse (dall'esito del file prima si può aprire Modifica), il plugin lo rende
+  // in pagine JPEG, poi lo stesso percorso della galleria; letto a metà, si aspetta il modulo. La copia si libera sempre.
+  // Risponde { esito: "aggiunte" | "saltati" | "illeggibili", troncato }
+  async function importaFile(f, scelta) {
+    for (let d; (d = finestraAperta());) await chiusa(d);
+    try {
+      scanStatus("Leggo lo scontrino", { busy: true });
+      const r = await COND.leggi({ id: f.id });
+      const troncato = r.totale > MAX_PAGINE;
+      const letto = await leggiScontrino(r.pagine, "jpeg", scelta, troncato ? `Ho letto le prime ${MAX_PAGINE} pagine.` : "");
+      const aggiunta = letto === "aggiunta" || await attendiModulo();
+      return { esito: aggiunta ? "aggiunte" : "saltati", troncato };
+    } catch (e) {
+      erroreCondiviso(e);
+      return { esito: "illeggibili", troncato: false };
+    } finally { liberaCondiviso(f); }
+  }
+  function erroreCondiviso(e) {
+    const code = e && e.code;
+    if (code === "NON_SUPPORTATO") scanStatus("Questo tipo di file non si può leggere: condividi una foto o un PDF.", { err: true });
+    else if (code === "ILLEGGIBILE") scanStatus("Non riesco ad aprire il file.", { err: true });
+    else erroreLettura(e);
+  }
+  function riassuntoCondivisi(n, { aggiunte, saltati, illeggibili, troncati }) {
+    const fatte = aggiunte === 1 ? "Aggiunta 1 spesa" : aggiunte ? `Aggiunte ${aggiunte} spese` : "Nessuna spesa aggiunta";
+    const altri = [
+      saltati && `${saltati} ${saltati === 1 ? "saltato" : "saltati"}`,
+      illeggibili && `${illeggibili} ${illeggibili === 1 ? "illeggibile" : "illeggibili"}`,
+      troncati && `${troncati} con le sole prime ${MAX_PAGINE} pagine`,
+    ].filter(Boolean);
+    return `${fatte} da ${n} file${altri.length ? " (" + altri.join(", ") + ")" : ""}.`;
+  }
+  const avvisoScartati = (n) => !n ? "" : ` ${n === 1 ? "Ne ho scartato 1" : `Ne ho scartati ${n}`}: si possono condividere al massimo ${MAX_CONDIVISI} file alla volta.`;
+  // All'avvio, a spese caricate: i file arrivati ad app chiusa, poi quelli che arrivano ad app aperta
+  function avviaCondivisione() {
+    if (!COND || !OCR) return;
+    document.querySelectorAll("dialog").forEach(d => d.addEventListener("close", fineLavoro));
+    try { Promise.resolve(COND.addListener("ricevuto", prendiCondivisi)).catch(() => {}); } catch (e) {}
+    prendiCondivisi();
   }
 
   function fillForm(v) {
@@ -2079,7 +2242,7 @@ body:has(.sel-bar:not([hidden])) { padding-bottom: calc(var(--sel-h, 0px) + 24px
   $("list").addEventListener("contextmenu", (e) => { if (idRigaSotto(e.target)) e.preventDefault(); });
   // Esc esce dalla selezione (con una ricerca scritta, il primo Esc svuota la ricerca; con una finestra aperta, chiude quella)
   document.addEventListener("keydown", (e) => {
-    if (e.key !== "Escape" || !selezione.size || document.querySelector("dialog[open]")) return;
+    if (e.key !== "Escape" || !selezione.size || finestraAperta()) return;
     if (e.target === $("q") && $("q").value) return;
     esciSelezione();
   }, true);
@@ -2109,7 +2272,7 @@ body:has(.sel-bar:not([hidden])) { padding-bottom: calc(var(--sel-h, 0px) + 24px
     } catch (e) {
       selEsito = { t: "Salvataggio non riuscito. Riprova.", err: true };
       return false;
-    } finally { selBusy = false; render(); }
+    } finally { selBusy = false; render(); fineLavoro(); }
   }
 
   $("selConto").addEventListener("click", async () => {
@@ -2159,15 +2322,14 @@ body:has(.sel-bar:not([hidden])) { padding-bottom: calc(var(--sel-h, 0px) + 24px
   const AppAndroid = isNative ? plugin("App") : null;
   let indietroAcceso = null;
   function aggiornaIndietro() {
-    const serve = selezione.size > 0 || !!document.querySelector("dialog[open]");
+    const serve = selezione.size > 0 || !!finestraAperta();
     if (!AppAndroid || serve === indietroAcceso) return;
     indietroAcceso = serve;
     try { Promise.resolve(AppAndroid.toggleBackButtonHandler({ enabled: serve })).catch(() => {}); } catch (e) {}
   }
   // Indietro con una finestra aperta: la chiude come Esc (o Annulla); altrimenti esce dalla selezione
   function tastoIndietro() {
-    const aperte = document.querySelectorAll("dialog[open]");
-    const d = aperte[aperte.length - 1];
+    const d = finestraAperta();
     if (d) { if (d.dispatchEvent(new Event("cancel", { cancelable: true }))) d.close(); }
     else if (selezione.size) esciSelezione();
   }
@@ -2175,6 +2337,16 @@ body:has(.sel-bar:not([hidden])) { padding-bottom: calc(var(--sel-h, 0px) + 24px
     try { Promise.resolve(AppAndroid.addListener("backButton", tastoIndietro)).catch(() => {}); } catch (e) {}
     new MutationObserver(aggiornaIndietro).observe(document.body, { subtree: true, attributes: true, attributeFilter: ["open"] });
   }
+
+  // ---- Barra di stato di Android (plugin SystemBars): segue il tema scelto, "DEFAULT" = quello del telefono ----
+  // Senza una scelta salvata non si tocca. Negli APK senza il plugin la chiamata fallisce e la barra resta com'è.
+  const Barre = isNative ? plugin("SystemBars") : null;
+  function barraDiStato(scelta) {
+    if (!Barre) return;
+    const style = scelta === "dark" ? "DARK" : scelta === "light" ? "LIGHT" : "DEFAULT";
+    try { Promise.resolve(Barre.setStyle({ style })).catch(() => {}); } catch (e) {}
+  }
+  if (temaSalvato()) barraDiStato(temaSalvato());
 
   // ---- Backup: esporta / importa ----
   const stamp = () => today().replace(/-/g, "");
@@ -2336,6 +2508,7 @@ body:has(.sel-bar:not([hidden])) { padding-bottom: calc(var(--sel-h, 0px) + 24px
     });
     render();
     segnaAvvioRiuscito();
+    avviaCondivisione();
   })();
 
   // ---- Aggiornamento automatico dell'interfaccia ----
@@ -2771,6 +2944,23 @@ body:has(.sel-bar:not([hidden])) { padding-bottom: calc(var(--sel-h, 0px) + 24px
     impDlg.showModal();
   });
   $("chiudiImp").addEventListener("click", () => impDlg.close());
+
+  // Aspetto: l'interruttore mostra il tema in uso (scelto, o quello del telefono finché non si sceglie)
+  const temaTelefono = matchMedia("(prefers-color-scheme: dark)");
+  function mostraTema() {
+    const scelta = temaSalvato();
+    $("temaScuro").checked = scelta ? scelta === "dark" : temaTelefono.matches;
+    $("temaSistema").hidden = !scelta;
+  }
+  function scegliTema(scelta) {
+    lsSet("spese.tema", scelta);
+    applicaTema(scelta);
+    mostraTema();
+  }
+  temaTelefono.addEventListener("change", mostraTema);
+  $("temaScuro").addEventListener("change", (e) => scegliTema(e.target.checked ? "dark" : "light"));
+  $("temaSistema").addEventListener("click", () => scegliTema(null));
+  mostraTema();
 
   // Ricerca manuale: prima l'app (APK), poi l'interfaccia
   $("cercaAgg").addEventListener("click", async () => {
