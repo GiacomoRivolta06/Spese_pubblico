@@ -162,6 +162,13 @@ input[type=text], input[type=search], input[type=date], input[inputmode], select
   font: inherit; color: var(--ink); background: var(--bg); border: 1px solid var(--line); border-radius: 8px; padding: 9px 10px; width: 100%; min-width: 0;
 }
 input:focus, select:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+/* Data: un pulsante con l'aspetto dei campi che apre il calendario (#calDlg). Il campo vero (#f-data) resta nel modulo,
+   invisibile ma non nascosto, con il valore AAAA-MM-GG */
+.data-btn { display: flex; align-items: center; justify-content: space-between; gap: 6px; width: 100%; min-width: 0; text-align: left; color: var(--ink); background: var(--bg); border: 1px solid var(--line); border-radius: 8px; padding: 9px 10px; }
+.data-btn span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.data-btn svg { flex: none; color: var(--muted); }
+.data-btn:focus-visible { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+.field input.data-nascosta { position: absolute; width: 1px; height: 1px; min-width: 0; padding: 0; border: 0; opacity: 0; pointer-events: none; }
 /* Prezzo: a sinistra il pulsante della valuta, nello stesso riquadro del campo, separati da una linea */
 .price-wrap { display: flex; align-items: stretch; min-width: 0; background: var(--bg); border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
 .price-wrap:focus-within { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
@@ -504,8 +511,9 @@ body:has(.sel-bar:not([hidden])) { padding-bottom: calc(var(--sel-h, 0px) + 24px
       <div class="price-wrap"><button type="button" class="valuta-btn" id="f-valuta" aria-haspopup="dialog" aria-label="Valuta: euro (EUR)" title="Cambia valuta"><span>€</span><svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path d="M7 10l5 5 5-5" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></button><input id="f-prezzo" inputmode="decimal" placeholder="0,00" required></div>
     </div>
     <div class="field">
-      <label for="f-data">Data</label>
-      <input type="date" id="f-data" required>
+      <label for="f-data-btn" id="f-data-lab">Data</label>
+      <button type="button" class="data-btn" id="f-data-btn" aria-haspopup="dialog" aria-labelledby="f-data-lab f-data-testo"><span id="f-data-testo"></span><svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><rect x="4" y="5.5" width="16" height="14.5" rx="2" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M4 10h16M8.5 3.5v4M15.5 3.5v4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></button>
+      <input type="date" id="f-data" class="data-nascosta" required tabindex="-1" aria-hidden="true">
     </div>
     <div class="cambio-riga" id="cambioBox" hidden>
       <div class="field">
@@ -1404,7 +1412,7 @@ body:has(.sel-bar:not([hidden])) { padding-bottom: calc(var(--sel-h, 0px) + 24px
     resetForm(); // svuota anche il prezzo
     $("f-tipo").value = r.tipologia ? tipoName(tipoKey(r)) : "";
     $("f-eserc").value = esercName(r.esercente);
-    $("f-data").value = today();
+    impostaData(today());
     const conto = contoOf(r);
     if (visibili.has(conto)) $("f-conto").value = conto;
     setMsg("Inserisci il prezzo e premi Aggiungi.");
@@ -1504,7 +1512,7 @@ body:has(.sel-bar:not([hidden])) { padding-bottom: calc(var(--sel-h, 0px) + 24px
     editingId = r.id; pendingDelete = null;
     $("f-tipo").value = r.tipologia || "";
     $("f-eserc").value = r.esercente || "";
-    $("f-data").value = r.data || today();
+    impostaData(r.data || today());
     prezzoInModifica(r);
     $("f-off").checked = !!r.offerto;
     $("f-nota").value = r.nota || ""; updNotaCnt();
@@ -1516,11 +1524,17 @@ body:has(.sel-bar:not([hidden])) { padding-bottom: calc(var(--sel-h, 0px) + 24px
     apriSpesa();
   }
 
+  // Data del modulo: il campo (AAAA-MM-GG) e il testo del pulsante che apre il calendario ("gio 15 ott 2026").
+  // L'evento input tiene allineato il pulsante quando il campo è scritto da fuori (impostaData lo fa già da sé)
+  function mostraData() { const k = $("f-data").value; $("f-data-testo").textContent = k ? etichettaPeriodo(k, k) : ""; }
+  function impostaData(k) { $("f-data").value = k; mostraData(); }
+  $("f-data").addEventListener("input", mostraData);
+
   function resetForm() {
     editingId = null;
     const keepDate = $("f-data").value || today();
     $("form").reset();
-    $("f-data").value = keepDate;
+    impostaData(keepDate);
     modulo.disc = null; impostaValuta(valutaBase);  // toglie anche la nota di Conforma
     $("f-conto").value = contoPredefinito();
     updNotaCnt();
@@ -2010,12 +2024,16 @@ body:has(.sel-bar:not([hidden])) { padding-bottom: calc(var(--sel-h, 0px) + 24px
     return chiedi($("scanDlg"), "scanFatto", "scanDlgAnnulla", risposta, misura);
   }
 
-  // ---- Calendario: toccando l'etichetta del periodo si sceglie un periodo da data a data ----
-  // Senza una scelta, "Fatto" porta la vista (settimana, mese o anno) sul mese mostrato.
-  // cal.mese: primo giorno del mese mostrato; cal.sel: { start, end } o null; cal.attendeFine: manca ancora l'ultimo giorno
+  // ---- Calendario: un solo calendario, in due modi ----
+  // "periodo": toccando l'etichetta del periodo si sceglie un periodo da data a data; senza una scelta,
+  // "Fatto" porta la vista (settimana, mese o anno) sul mese mostrato.
+  // "giorno": toccando la Data del modulo si sceglie un giorno solo (un tocco lo seleziona, "Fatto" lo conferma).
+  // cal.modo: uno dei MODI; cal.mese: primo giorno del mese mostrato; cal.sel: { start, end } o null;
+  // cal.attendeFine: manca ancora l'ultimo giorno
   const calDlg = $("calDlg");
   const ANNO_MIN = 2000, annoMax = () => new Date().getFullYear() + 5;
-  const cal = { mese: null, sel: null, attendeFine: false };
+  const cal = { modo: null, mese: null, sel: null, attendeFine: false };
+  const unGiorno = (k) => ({ start: k, end: k });
   const mostraMese = (d) => { cal.mese = new Date(d.getFullYear(), d.getMonth(), 1); };
   // Nomi dei mesi nella tendina: una volta sola
   function riempiTendineCal() {
@@ -2064,29 +2082,54 @@ body:has(.sel-bar:not([hidden])) { padding-bottom: calc(var(--sel-h, 0px) + 24px
     $("calNext").disabled = y === +anni[anni.length - 1].value && m === 11;
     grigliaCal();
     $("calInfo").textContent = infoCalendario();
-    $("calAzzera").hidden = !cal.sel;
+    $("calAzzera").hidden = !cal.sel || !cal.modo.azzera;
   }
-  // Primo tocco: periodo di un giorno; secondo: chiude il periodo (gli estremi si scambiano se serve); terzo: ricomincia
+  // Che cosa fa il calendario in ciascun modo: tocco su un giorno, risposta di "Fatto", "Oggi" (oltre a mostrare
+  // il mese corrente), se c'è "Annulla selezione" e il nome della finestra
+  const MODI = {
+    // Primo tocco: periodo di un giorno; secondo: chiude il periodo (gli estremi si scambiano se serve); terzo: ricomincia.
+    // Risposta: il periodo scelto, la data su cui portare la vista, oppure null (niente da fare)
+    periodo: {
+      titolo: "Scegli un periodo", azzera: true,
+      tocca(k) {
+        const s = cal.sel;
+        cal.sel = !cal.attendeFine ? unGiorno(k) : k < s.start ? { start: k, end: s.start } : { start: s.start, end: k };
+        cal.attendeFine = !cal.attendeFine;
+      },
+      risposta() {
+        if (cal.sel) return { custom: cal.sel };
+        const d = dataPerFatto();
+        return d ? { data: d } : null;
+      },
+      oggi() {},
+    },
+    // Un tocco sceglie il giorno (sostituisce il precedente); risposta: il giorno scelto (AAAA-MM-GG)
+    giorno: {
+      titolo: "Scegli la data", azzera: false,
+      tocca(k) { cal.sel = unGiorno(k); },
+      risposta: () => cal.sel.start,
+      oggi() { cal.sel = unGiorno(today()); },
+    },
+  };
   function toccaGiorno(k) {
-    if (cal.attendeFine) cal.sel = k < cal.sel.start ? { start: k, end: cal.sel.start } : { start: cal.sel.start, end: k };
-    else cal.sel = { start: k, end: k };
-    cal.attendeFine = !cal.attendeFine;
+    cal.modo.tocca(k);
     disegnaCal();
     $("calGriglia").querySelector(`[data-giorno="${k}"]`).focus();
   }
-  // Risposta di Fatto: il periodo scelto, la data su cui portare la vista, oppure null (niente da fare)
-  function rispostaCal() {
-    if (cal.sel) return { custom: cal.sel };
-    const d = dataPerFatto();
-    return d ? { data: d } : null;
-  }
-  function apriCalendario() {
-    cal.sel = custom ? { ...custom } : null; cal.attendeFine = false;
-    // periodo del calendario: il mese del suo inizio; settimana: il mese in cui inizia; mese e anno: il mese dell'ancora
-    mostraMese(view === "year" && !custom ? anchor : parseDate(period().start));
+  // Calendario aperto nel modo dato, con la scelta sel ({ start, end } o null) e il mese mostrato;
+  // risponde con la risposta del modo, oppure null (Annulla, Esc, tocco fuori, Indietro)
+  function mostraCalendario(modo, sel, mese) {
+    Object.assign(cal, { modo, sel, attendeFine: false });
+    calDlg.setAttribute("aria-label", modo.titolo);
+    mostraMese(mese);
     anniCal(cal.mese.getFullYear());
     disegnaCal();
-    chiedi(calDlg, "calFatto", "calAnnulla", rispostaCal).then(applicaCalendario);
+    return chiedi(calDlg, "calFatto", "calAnnulla", () => cal.modo.risposta());
+  }
+  function apriCalendario() {
+    // periodo del calendario: il mese del suo inizio; settimana: il mese in cui inizia; mese e anno: il mese dell'ancora
+    const mese = view === "year" && !custom ? anchor : parseDate(period().start);
+    mostraCalendario(MODI.periodo, custom ? { ...custom } : null, mese).then(applicaCalendario);
   }
   // null: Annulla, Esc, tocco fuori, Indietro, oppure Fatto senza nulla da cambiare
   function applicaCalendario(r) {
@@ -2094,11 +2137,25 @@ body:has(.sel-bar:not([hidden])) { padding-bottom: calc(var(--sel-h, 0px) + 24px
     if (r.custom) scegliPeriodo(r.custom); else vaiAlPeriodoDi(r.data);
     render();
   }
+  // Data del modulo: il calendario si apre sul suo mese, con quel giorno scelto
+  function apriCalendarioGiorno() {
+    const k = $("f-data").value || today();
+    mostraCalendario(MODI.giorno, unGiorno(k), parseDate(k)).then(k => k && applicaData(k));
+  }
+  // Giorno scelto per il modulo: solo se cambia; "change" come quando lo si scrive nel campo (cerca il cambio)
+  function applicaData(k) {
+    const f = $("f-data");
+    if (f.value === k) return;
+    impostaData(k);
+    f.dispatchEvent(new Event("change", { bubbles: true }));
+  }
   riempiTendineCal();
   const calVai = (n) => { mostraMese(new Date(cal.mese.getFullYear(), cal.mese.getMonth() + n, 1)); disegnaCal(); };
   $("calPrev").addEventListener("click", () => calVai(-1));
   $("calNext").addEventListener("click", () => calVai(1));
-  $("calOggi").addEventListener("click", () => { mostraMese(new Date()); disegnaCal(); });
+  // Oggi: il mese corrente (per la data del modulo sceglie anche oggi)
+  $("calOggi").addEventListener("click", () => { cal.modo.oggi(); mostraMese(new Date()); disegnaCal(); });
+  $("f-data-btn").addEventListener("click", apriCalendarioGiorno);
   $("calAzzera").addEventListener("click", () => { cal.sel = null; cal.attendeFine = false; disegnaCal(); $("calOggi").focus(); });
   ["calMese", "calAnno"].forEach(id => $(id).addEventListener("change", () => { mostraMese(new Date(+$("calAnno").value, +$("calMese").value, 1)); disegnaCal(); }));
 
@@ -2581,7 +2638,7 @@ body:has(.sel-bar:not([hidden])) { padding-bottom: calc(var(--sel-h, 0px) + 24px
     if (v.tipologia) $("f-tipo").value = v.tipologia;
     if (v.esercente) $("f-eserc").value = v.esercente;
     if (v.prezzoCent) $("f-prezzo").value = centsToCampo(v.prezzoCent, valutaBase);
-    if (v.data) $("f-data").value = v.data;
+    if (v.data) impostaData(v.data);
     if (v.conto) $("f-conto").value = v.conto;
     apriSpesa();
   }
@@ -2956,7 +3013,7 @@ body:has(.sel-bar:not([hidden])) { padding-bottom: calc(var(--sel-h, 0px) + 24px
     } catch (e) { backupMsg("File non valido: scegli un backup esportato da Registro Spese.", true); }
   });
 
-  $("f-data").value = today();
+  impostaData(today());
   render();
 
   (async () => {
