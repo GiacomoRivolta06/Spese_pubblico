@@ -162,9 +162,32 @@ input[type=text], input[type=search], input[type=date], input[inputmode], select
   font: inherit; color: var(--ink); background: var(--bg); border: 1px solid var(--line); border-radius: 8px; padding: 9px 10px; width: 100%; min-width: 0;
 }
 input:focus, select:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
-.price-wrap { position: relative; }
-.price-wrap span { position: absolute; left: 10px; top: 50%; transform: translateY(-50%); color: var(--muted); font-family: var(--f-num); }
-.price-wrap input { padding-left: 26px; font-family: var(--f-num); }
+/* Prezzo: a sinistra il pulsante della valuta, nello stesso riquadro del campo, separati da una linea */
+.price-wrap { display: flex; align-items: stretch; min-width: 0; background: var(--bg); border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
+.price-wrap:focus-within { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+.price-wrap input { flex: 1; border: 0; border-radius: 0; background: none; font-family: var(--f-num); }
+.price-wrap input:focus { box-shadow: none; }
+.valuta-btn { flex: none; display: inline-flex; align-items: center; gap: 2px; border: 0; border-right: 1px solid var(--line); background: none; padding: 0 6px 0 10px; color: var(--muted); font-family: var(--f-num); }
+.valuta-btn:hover { color: var(--accent); }
+.valuta-btn:focus-visible { outline-offset: -2px; }
+/* Valuta estera: cambio e prezzo nella valuta di base affiancati, sotto il messaggio */
+.cambio-riga { grid-column: 1 / -1; display: grid; grid-template-columns: 1fr 1fr; gap: 6px 12px; }
+.cambio-riga input { font-family: var(--f-num); }
+.cambio-msg { grid-column: 1 / -1; }
+.cambio-msg:empty { display: none; }
+.disc-box { grid-column: 1 / -1; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 12px; background: var(--accent-soft); border-radius: 8px; padding: 8px 10px; font-size: .86rem; }
+.disc-box .ghost { padding: 6px 12px; background: var(--paper); }
+/* Elenco delle valute */
+.valute-list { list-style: none; margin: 0; padding: 0; border: 1px solid var(--line); border-radius: 10px; }
+.valute-list li { border-top: 1px solid var(--line); }
+.valute-list li:first-child { border-top: 0; }
+.valuta-riga { display: flex; align-items: baseline; gap: 12px; width: 100%; border: 0; background: none; text-align: left; padding: 10px 12px; }
+.valuta-riga:hover { background: var(--bg); }
+.valuta-riga b { font-family: var(--f-num); font-weight: 600; flex: none; }
+.valuta-riga span { color: var(--muted); font-size: .88rem; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.valuta-riga[aria-current="true"] { background: var(--accent-soft); }
+.valute-tit { margin: 4px 0 -4px; font-size: .72rem; text-transform: uppercase; letter-spacing: .09em; color: var(--muted); font-weight: 600; }
+.imp-sez .valuta-base { align-self: flex-start; }
 .check { display: flex; align-items: center; gap: 10px; align-self: end; padding: 9px 2px; cursor: pointer; user-select: none; }
 .check input { width: 20px; height: 20px; accent-color: var(--gift); margin: 0; }
 .check span { font-weight: 600; }
@@ -200,7 +223,10 @@ input:focus, select:focus { outline: none; border-color: var(--accent); box-shad
 .row .tags { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 3px; }
 .chip { font-size: .72rem; padding: 1px 8px; border-radius: 99px; background: var(--accent-soft); color: var(--accent); font-weight: 600; }
 .chip.gift { background: var(--gift-soft); color: var(--gift); }
-.row .amt { font-family: var(--f-num); font-variant-numeric: tabular-nums; font-weight: 600; }
+.row .amt { font-family: var(--f-num); font-variant-numeric: tabular-nums; font-weight: 600; text-align: right; }
+/* Sotto il prezzo: l'importo nella valuta estera, o (spese di un'altra valuta di base) il valore al cambio di oggi */
+.row .amt small { display: block; font-size: .7rem; color: var(--muted); font-weight: 600; }
+.row .amt small.disc { color: var(--accent); }
 .row-actions { display: flex; gap: 2px; }
 .row-actions button { background: none; border: 0; padding: 6px; border-radius: 6px; color: var(--muted); font-size: .8rem; }
 .row-actions button:hover { color: var(--ink); background: var(--bg); }
@@ -475,11 +501,26 @@ body:has(.sel-bar:not([hidden])) { padding-bottom: calc(var(--sel-h, 0px) + 24px
     </div>
     <div class="field">
       <label for="f-prezzo">Prezzo</label>
-      <div class="price-wrap"><span>€</span><input id="f-prezzo" inputmode="decimal" placeholder="0,00" required></div>
+      <div class="price-wrap"><button type="button" class="valuta-btn" id="f-valuta" aria-haspopup="dialog" aria-label="Valuta: euro (EUR)" title="Cambia valuta"><span>€</span><svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path d="M7 10l5 5 5-5" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></button><input id="f-prezzo" inputmode="decimal" placeholder="0,00" required></div>
     </div>
     <div class="field">
       <label for="f-data">Data</label>
       <input type="date" id="f-data" required>
+    </div>
+    <div class="cambio-riga" id="cambioBox" hidden>
+      <div class="field">
+        <label for="f-cambio" id="cambioLab">1 EUR = … EUR</label>
+        <input id="f-cambio" inputmode="decimal" autocomplete="off">
+      </div>
+      <div class="field">
+        <label for="f-prezzo-base" id="prezzoBaseLab">Prezzo in EUR</label>
+        <input id="f-prezzo-base" inputmode="decimal" placeholder="0,00" autocomplete="off">
+      </div>
+      <p class="form-msg cambio-msg" id="cambioMsg" role="status"></p>
+    </div>
+    <div class="disc-box" id="discBox" hidden>
+      <span id="discTesto"></span>
+      <button type="button" class="ghost" id="f-conforma" hidden>Conforma</button>
     </div>
     <div class="field full" id="contoField" hidden>
       <label for="f-conto">Conto</label>
@@ -527,6 +568,7 @@ body:has(.sel-bar:not([hidden])) { padding-bottom: calc(var(--sel-h, 0px) + 24px
     <button type="button" class="ghost" id="selTutte">Seleziona tutte</button>
     <button type="button" class="ghost" id="selConto">Conto</button>
     <button type="button" class="ghost" id="selOfferto">Offerto</button>
+    <button type="button" class="ghost" id="selConforma" hidden>Conforma</button>
     <button type="button" class="ghost sel-elimina" id="selElimina">Elimina</button>
   </div>
 </div>
@@ -559,6 +601,13 @@ body:has(.sel-bar:not([hidden])) { padding-bottom: calc(var(--sel-h, 0px) + 24px
         <button type="button" class="ghost" id="exportCsv">Esporta tutto in Excel</button>
       </div>
       <span class="form-msg" id="backupMsg" role="status"></span>
+    </section>
+
+    <section class="imp-sez" id="impValutaSez" aria-labelledby="impValuta">
+      <h3 id="impValuta">Valuta di base</h3>
+      <p>Totali, grafico ed Excel sono in questa valuta. Le spese già inserite restano come sono.</p>
+      <button type="button" class="ghost valuta-base" id="valutaBaseBtn" aria-haspopup="dialog">EUR · euro</button>
+      <span class="form-msg" id="valutaMsg" role="status"></span>
     </section>
 
     <section class="imp-sez" aria-labelledby="impAspetto">
@@ -684,6 +733,24 @@ body:has(.sel-bar:not([hidden])) { padding-bottom: calc(var(--sel-h, 0px) + 24px
   </div>
 </dialog>
 
+<dialog class="dlg" id="valutaDlg" aria-labelledby="valutaTitle">
+  <div class="dlg-body">
+    <h2 id="valutaTitle">Valuta</h2>
+    <ul class="valute-list" id="valuteTop"></ul>
+    <h3 class="valute-tit">Tutte</h3>
+    <ul class="valute-list" id="valuteTutte"></ul>
+    <div class="dlg-actions"><button type="button" class="ghost" id="valutaAnnulla">Annulla</button></div>
+  </div>
+</dialog>
+
+<dialog class="dlg" id="selConformaDlg" aria-labelledby="selConformaTitle">
+  <div class="dlg-body">
+    <h2 id="selConformaTitle">Conformare le spese?</h2>
+    <p class="dlg-sub" id="selConformaTesto"></p>
+    <div class="dlg-actions"><button type="button" class="ghost" id="selConformaAnnulla">Annulla</button><button type="button" class="primary" id="selConformaOk">Conforma</button></div>
+  </div>
+</dialog>
+
 <script>
 // Protezione degli aggiornamenti automatici: se una nuova interfaccia non riesce a partire
 // per due avvii di fila, l'app torna da sola alla versione precedente.
@@ -768,8 +835,164 @@ body:has(.sel-bar:not([hidden])) { padding-bottom: calc(var(--sel-h, 0px) + 24px
     barraDiStato(scelta);
   }
   const DEFAULT_TIPI = ["Alimentari", "Ristorante", "Bar", "Trasporti", "Carburante", "Casa", "Abbigliamento", "Svago", "Farmacia", "Regali"];
-  const fmt = new Intl.NumberFormat("it-IT", { style: "currency", currency: "EUR" });
-  const euro = (cents) => fmt.format((cents || 0) / 100);
+  // ---- Valute: la valuta di base (totali, grafico, Excel) e le spese scritte in un'altra valuta ----
+  // In ogni spesa prezzoCent è nella sua valutaBase (campo assente = EUR). Solo se l'importo è stato scritto in
+  // un'altra valuta: valuta (il codice), importoOrig (in centesimi di quella valuta), cambio (unità di valuta per 1 di valutaBase).
+  // La valuta di base scelta in Impostazioni sta in spese.valutaBase (assente = EUR) e non entra nel backup.
+  const VALUTE = ["AED", "ARS", "AUD", "BGN", "BRL", "CAD", "CHF", "CLP", "CNY", "COP", "CZK", "DKK", "EGP", "EUR", "GBP", "HKD", "HUF", "IDR", "ILS", "INR", "ISK",
+    "JPY", "KRW", "MAD", "MXN", "MYR", "NOK", "NZD", "PHP", "PLN", "QAR", "RON", "RSD", "SAR", "SEK", "SGD", "THB", "TRY", "TWD", "UAH", "USD", "ZAR"];
+  const PRINCIPALI = ["EUR", "USD", "GBP", "CHF", "TRY", "JPY"];
+  const SENZA_DECIMALI = new Set(["JPY", "KRW", "CLP", "ISK"]);
+  const valutaValida = (v) => VALUTE.includes(v);
+  const codiceValuta = (v) => typeof v === "string" && /^[A-Z]{3}$/.test(v);
+  // Formattatori "12,50 €", "523,00 TRY", "1.500 JPY": uno per valuta, creati alla prima richiesta
+  const formati = new Map();
+  function formato(v) {
+    if (!formati.has(v)) {
+      const d = SENZA_DECIMALI.has(v) ? 0 : 2;
+      formati.set(v, new Intl.NumberFormat("it-IT", { style: "currency", currency: v, minimumFractionDigits: d, maximumFractionDigits: d }));
+    }
+    return formati.get(v);
+  }
+  const importo = (cents, v) => formato(v || "EUR").format((cents || 0) / 100);
+  // "€", "£", oppure il codice ("TRY") quando la valuta non ha un simbolo suo
+  const simbolo = (v) => (formato(v).formatToParts(0).find(p => p.type === "currency") || {}).value || v;
+  let nomiValute = null;
+  const nomeValuta = (v) => { try { nomiValute = nomiValute || new Intl.DisplayNames("it", { type: "currency" }); return nomiValute.of(v) || v; } catch (e) { return v; } };
+  // Centesimi arrotondati come si scrivono in quella valuta (yen, won, pesos cileni, corone islandesi: all'unità)
+  const arrotonda = (cents, v) => SENZA_DECIMALI.has(v) ? Math.round(cents / 100) * 100 : Math.round(cents);
+  const seiCifre = (x) => Number(x.toPrecision(6));
+  const testoCambio = (c) => Number.isFinite(c) && c > 0 ? String(c).replace(".", ",") : "";
+  const dataIt = (d) => String(d || "").split("-").reverse().join("/");
+  let valutaBase = valutaValida(lsGet("spese.valutaBase")) ? lsGet("spese.valutaBase") : "EUR";
+  const inBase = (cents) => importo(cents, valutaBase);
+  // Una somma nella valuta di base: "≈ " se contiene spese convertite al cambio di oggi,
+  // "· 2 senza cambio" se alcune di quelle non si sono potute convertire (e quindi non sono nella somma)
+  const testoSomma = (cents, approx, senzaCambio) => (approx ? "≈ " : "") + inBase(cents) + (senzaCambio ? ` · ${senzaCambio} senza cambio` : "");
+  const baseDi = (r) => r.valutaBase || "EUR";
+  // Spesa salvata con un'altra valuta di base: si vede com'è e, nei totali, si converte al cambio di oggi
+  const discrepante = (r) => baseDi(r) !== valutaBase;
+  // Spesa con l'importo scritto in un'altra valuta
+  const estera = (r) => !!r.valuta && r.valuta !== baseDi(r) && Number.isFinite(r.importoOrig);
+  // Unità di a per 1 di da, da una tabella { codice: unità per 1 EUR }; NaN se manca una delle due
+  const tasso = (t, da, a) => { const x = t && t[da], y = t && t[a]; return x > 0 && y > 0 ? y / x : NaN; };
+  // Valore della spesa in centesimi di B (t: tabella dei cambi da usare se la spesa è in un'altra valuta di base)
+  function valoreIn(r, B, t) {
+    if (baseDi(r) === B) return r.prezzoCent || 0;
+    if (r.valuta === B && Number.isFinite(r.importoOrig)) return r.importoOrig;
+    return arrotonda((r.prezzoCent || 0) * tasso(t, baseDi(r), B), B);
+  }
+  // La spesa come se fosse stata inserita con la valuta di base B (t: tabella del giorno della spesa), oppure null
+  // se manca il cambio. L'importo in una terza valuta resta, con il cambio ricalcolato; gli altri campi valuta si tolgono
+  function conformata(r, B, t) {
+    const { valutaBase: _b, valuta, importoOrig, cambio: _c, ...resto } = r;
+    const base = campiBase(B);
+    if (estera(r) && valuta !== B) {
+      const c = seiCifre(tasso(t, B, valuta));
+      return c > 0 ? { ...resto, prezzoCent: arrotonda(importoOrig / c, B), ...base, valuta, importoOrig, cambio: c } : null;
+    }
+    const p = valoreIn(r, B, t);
+    return Number.isFinite(p) ? { ...resto, prezzoCent: p, ...base } : null;
+  }
+  // Serve un cambio per conformare la spesa a B? No solo se l'importo era stato scritto proprio in B
+  const serveCambio = (r, B) => !(estera(r) && r.valuta === B);
+  // Campo valutaBase da scrivere in una spesa (assente per EUR, così chi usa solo euro ha i file di sempre)
+  const campiBase = (B) => B !== "EUR" ? { valutaBase: B } : {};
+  // Campi valuta di una spesa del backup, solo se ben formati
+  function campiValuta(r) {
+    const out = {};
+    if (codiceValuta(r.valutaBase)) out.valutaBase = r.valutaBase;
+    if (codiceValuta(r.valuta) && Number.isFinite(r.importoOrig) && Number.isFinite(r.cambio) && r.cambio > 0) Object.assign(out, { valuta: r.valuta, importoOrig: r.importoOrig, cambio: r.cambio });
+    return out;
+  }
+  // Ultime 3 valute estere usate (spese.valuteRecenti), in cima alla lista
+  const valuteRecenti = () => lsLista("spese.valuteRecenti").filter(valutaValida).slice(0, 3);
+  const ricordaValuta = (v) => lsSet("spese.valuteRecenti", JSON.stringify([v, ...valuteRecenti().filter(x => x !== v)].slice(0, 3)));
+
+  // ---- Tabelle dei cambi: sempre contro EUR, scaricate solo quando servono, tenute in spese.cambi ----
+  // { latest: { g: giorno in cui è stata scaricata, d: data del cambio, t }, giorni: { "AAAA-MM-GG": { d, t } } },
+  // t = { codice: unità per 1 EUR } con le sole valute della lista; al massimo 60 giorni
+  const MAX_GIORNI_CAMBI = 60, ATTESA_CAMBI_MS = 6000;
+  const URL_CAMBI = (k) => [`https://cdn.jsdelivr.net/npm/@fawazahmed0/currency-api@${k}/v1/currencies/eur.json`, `https://${k}.currency-api.pages.dev/v1/currencies/eur.json`];
+  const tabellaBuona = (x) => !!(x && typeof x === "object" && x.t && typeof x.t === "object");
+  const cambi = (() => {
+    const c = lsJson("spese.cambi") || {};
+    const giorni = {};
+    if (c.giorni && typeof c.giorni === "object") Object.entries(c.giorni).forEach(([k, v]) => { if (tabellaBuona(v)) giorni[k] = v; });
+    return { latest: tabellaBuona(c.latest) ? c.latest : null, giorni };
+  })();
+  const salvaCambi = () => lsSet("spese.cambi", JSON.stringify(cambi));
+  // Risposta dell'archivio dei cambi { date, eur: { try: …, usd: … } } -> { d, t }, oppure null se non si capisce
+  function leggiTabella(j, chiave) {
+    const src = j && (j.eur || j.EUR);
+    if (!src || typeof src !== "object") return null;
+    const t = { EUR: 1 };
+    VALUTE.forEach(v => { const x = Number(src[v.toLowerCase()] ?? src[v]); if (v !== "EUR" && Number.isFinite(x) && x > 0) t[v] = x; });
+    if (Object.keys(t).length < 2) return null;
+    const d = /^\d{4}-\d{2}-\d{2}$/.test(j.date) ? j.date : chiave === "latest" ? today() : chiave;
+    return { d, t };
+  }
+  // Una richiesta a un indirizzo: { tab } se c'è una tabella che si capisce, "assente" se il server ha risposto
+  // senza (404, errore, contenuto che non si capisce), "rete" se non ha risposto (offline, attesa scaduta)
+  async function chiediCambi(url, chiave) {
+    const ctl = new AbortController(), timer = setTimeout(() => ctl.abort(), ATTESA_CAMBI_MS);
+    let r;
+    try { r = await fetch(url, { signal: ctl.signal, cache: "no-store" }); }
+    catch (e) { clearTimeout(timer); return "rete"; }
+    try { const tab = r.ok ? leggiTabella(await r.json(), chiave) : null; return tab ? { tab } : "assente"; }
+    catch (e) { return "assente"; } finally { clearTimeout(timer); }
+  }
+  // Tabella di un giorno ("AAAA-MM-GG") o "latest", provando i due indirizzi: { tab } | "assente" | "rete".
+  // Una sola richiesta per chiave alla volta: chi chiede la stessa tabella mentre arriva aspetta quella
+  const inCorso = new Map();
+  async function scarica(chiave) {
+    let esito = "rete";
+    for (const url of URL_CAMBI(chiave)) {
+      const e = await chiediCambi(url, chiave);
+      if (e.tab) return e;
+      if (e === "assente") esito = "assente";
+    }
+    return esito;
+  }
+  function scaricaCambi(chiave) {
+    if (!inCorso.has(chiave)) inCorso.set(chiave, scarica(chiave).finally(() => inCorso.delete(chiave)));
+    return inCorso.get(chiave);
+  }
+  // Cambio di oggi: "latest", scaricato al massimo una volta al giorno; senza rete quello che c'è (anche vecchio), o null
+  async function tabellaOggi() {
+    if (cambi.latest && cambi.latest.g === today()) return cambi.latest;
+    const e = await scaricaCambi("latest");
+    if (e.tab) { cambi.latest = { g: today(), ...e.tab }; salvaCambi(); }
+    return cambi.latest;
+  }
+  function ricordaGiorno(data, tab) {
+    cambi.giorni[data] = tab;
+    const chiavi = Object.keys(cambi.giorni);
+    chiavi.slice(0, Math.max(0, chiavi.length - MAX_GIORNI_CAMBI)).forEach(k => delete cambi.giorni[k]);
+    salvaCambi();
+  }
+  // Cambio del giorno di una spesa (d dice di che giorno è davvero). Un giorno futuro o di oggi, o un giorno che
+  // l'archivio non ha, prende "latest"; senza rete per quel giorno: null (non si ripiega in silenzio su un altro giorno)
+  async function tabellaDel(data) {
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(data) || data >= today()) return tabellaOggi();
+    if (cambi.giorni[data]) return cambi.giorni[data];
+    const e = await scaricaCambi(data);
+    if (e.tab) { ricordaGiorno(data, e.tab); return e.tab; }
+    return e === "assente" ? tabellaOggi() : null;
+  }
+  const cambioDiOggi = () => cambi.latest ? cambi.latest.t : null;
+  // Con spese di un'altra valuta di base si cerca il cambio di oggi e, se arriva, si ridisegna. Si smette di cercarlo
+  // solo quando è arrivato (latest scaricato oggi); dopo un tentativo non riuscito si riprova al più ogni minuto
+  const RIPROVA_CAMBI_MS = 60000;
+  let ultimoTentativo = -Infinity;
+  function cercaCambioOggi() {
+    if ((cambi.latest && cambi.latest.g === today()) || inCorso.has("latest") || !rows.some(discrepante)) return;
+    if (Date.now() - ultimoTentativo < RIPROVA_CAMBI_MS) return;
+    ultimoTentativo = Date.now();
+    tabellaOggi().then(t => { if (t && t.g === today()) render(); });
+  }
+  // "al cambio del 14/10/2026", con la nota se non è quello del giorno della spesa
+  const alCambioDel = (tab, data) => `al cambio del ${dataIt(tab.d)}` + (tab.d !== data ? ` (quello del ${dataIt(data)} non è disponibile)` : "");
   const monthFmt = new Intl.DateTimeFormat("it-IT", { month: "long", year: "numeric" });
   const dayFmt = new Intl.DateTimeFormat("it-IT", { weekday: "short", day: "numeric", month: "short" });
 
@@ -949,7 +1172,9 @@ body:has(.sel-bar:not([hidden])) { padding-bottom: calc(var(--sel-h, 0px) + 24px
 
   // Ricerca testuale (ignora maiuscole e accenti), su tutte le date
   const norm = (s) => String(s || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
-  const matches = (r, q) => norm([r.esercente, r.nota, r.tipologia, centsToInput(r.prezzoCent || 0)].join(" ")).includes(q);
+  // si trova anche per importo e codice della valuta estera, e per la valuta di una spesa di un'altra valuta di base
+  const matches = (r, q) => norm([r.esercente, r.nota, r.tipologia, centsToInput(r.prezzoCent || 0),
+    ...estera(r) ? [centsToInput(r.importoOrig), r.valuta] : [], ...discrepante(r) ? [baseDi(r)] : []].join(" ")).includes(q);
   // La spesa è tra quelle mostrate: con una ricerca (q) su tutte le date, altrimenti nel periodo P
   const nelFiltro = (r, P, q) => !!r.data && (q ? matches(r, q) : r.data >= P.start && r.data <= P.end);
   // Ordine dell'elenco: dalla più recente; nello stesso giorno, dall'ultima inserita
@@ -958,20 +1183,31 @@ body:has(.sel-bar:not([hidden])) { padding-bottom: calc(var(--sel-h, 0px) + 24px
   let showDates = false;  // data su ogni riga (vista anno, periodo del calendario o ricerca)
   let lastLabel = "";
 
-  function parsePrice(s) {
+  // Numero scritto all'italiana ("1.234,56", "12,5", "12.50"); NaN se non è un numero ≥ 0
+  function parseNumero(s) {
     s = String(s).trim().replace(/\s|€/g, "");
     if (!s) return NaN;
     if (s.includes(",")) s = s.replace(/\./g, "").replace(",", ".");
     const v = Number(s);
-    return Number.isFinite(v) && v >= 0 ? Math.round(v * 100) : NaN;
+    return Number.isFinite(v) && v >= 0 ? v : NaN;
   }
+  const parsePrice = (s) => { const v = parseNumero(s); return Number.isNaN(v) ? NaN : Math.round(v * 100); };
   const centsToInput = (c) => (c / 100).toFixed(2).replace(".", ",");
+  // Nel campo del prezzo: senza decimali per yen, won, pesos cileni e corone islandesi
+  const centsToCampo = (c, v) => SENZA_DECIMALI.has(v) ? String(Math.round(c / 100)) : centsToInput(c);
 
-  // Somme in centesimi: spese normali (v) e offerte (g), separate
+  // Somme in centesimi nella valuta di base: spese normali (v) e offerte (g), separate.
+  // Le spese di un'altra valuta di base si convertono al cambio di oggi (av, ag: la somma ne contiene almeno una);
+  // quelle senza cambio restano fuori dalla somma e si contano (nv, ng)
   function somme(lista) {
-    let v = 0, g = 0;
-    lista.forEach(r => { if (r.offerto) g += r.prezzoCent || 0; else v += r.prezzoCent || 0; });
-    return { v, g };
+    let v = 0, g = 0, av = false, ag = false, nv = 0, ng = 0;
+    const t = cambioDiOggi();
+    lista.forEach(r => {
+      const x = valoreIn(r, valutaBase, t), d = discrepante(r), ok = Number.isFinite(x);
+      if (r.offerto) { ag = ag || d; if (ok) g += x; else ng++; }
+      else { av = av || d; if (ok) v += x; else nv++; }
+    });
+    return { v, g, av, ag, nv, ng };
   }
   // Raggruppa una lista per chiave, nell'ordine in cui le chiavi compaiono: Map chiave -> elementi
   function raggruppa(lista, chiave) {
@@ -1047,10 +1283,10 @@ body:has(.sel-bar:not([hidden])) { padding-bottom: calc(var(--sel-h, 0px) + 24px
     $("export").disabled = !righeDelPeriodo().length;
 
     // Il totale esclude le voci offerte: il loro importo resta solo nella riga "offerto"
-    const { v: tot, g: gift } = somme(inMonth);
-    $("total").textContent = euro(tot);
+    const { v: tot, g: gift, av, ag, nv, ng } = somme(inMonth);
+    $("total").textContent = testoSomma(tot, av, nv);
     $("count").textContent = inMonth.length;
-    $("giftTotal").textContent = euro(gift);
+    $("giftTotal").textContent = testoSomma(gift, ag, ng);
 
     // colonne: giorni della settimana, settimane del mese o mesi dell'anno.
     // Ogni colonna somma le spese normali (azzurro) e quelle offerte (arancio, sopra).
@@ -1078,7 +1314,7 @@ body:has(.sel-bar:not([hidden])) { padding-bottom: calc(var(--sel-h, 0px) + 24px
           if (b.g) { const ig = el("i", "g"); ig.style.height = hg + "px"; bar.append(ig); }
           if (b.v) { const iv = el("i"); iv.style.height = hv + "px"; bar.append(iv); }
         }
-        const title = `${b.title}: ${euro(b.v)}` + (b.g ? ` · offerto ${euro(b.g)}` : "");
+        const title = `${b.title}: ${testoSomma(b.v, b.av, b.nv)}` + (b.g || b.ng ? ` · offerto ${testoSomma(b.g, b.ag, b.ng)}` : "");
         cols.append(el("div", { className: "col" + (b.now ? " now" : ""), title }, bar, el("span", null, b.lab)));
       });
     }
@@ -1096,7 +1332,7 @@ body:has(.sel-bar:not([hidden])) { padding-bottom: calc(var(--sel-h, 0px) + 24px
     const head = el("div", "bars-head", el("span", null, nOff ? `${nOff} ${nOff === 1 ? "categoria nascosta" : "categorie nascoste"}` : "Tocca una categoria per nasconderla"));
     if (nOff) head.append(btn("link", "Mostra tutte", showAll));
     bars.append(head);
-    entries.forEach(([t, { v, g }]) => {
+    entries.forEach(([t, { v, g, av, ag, nv, ng }]) => {
       const on = !hidden.has(t);
       const tr = el("div", "bar-track");
       const both = v > 0 && g > 0;
@@ -1108,7 +1344,7 @@ body:has(.sel-bar:not([hidden])) { padding-bottom: calc(var(--sel-h, 0px) + 24px
         el("span", { className: "dot", "aria-hidden": "true" }),
         el("span", "n", tipoName(t)),
         tr,
-        el("span", "v", euro(v), g ? el("small", null, "+ " + euro(g) + " offerto") : null),
+        el("span", "v", testoSomma(v, av, nv), g || ng ? el("small", null, "+ " + testoSomma(g, ag, ng) + " offerto") : null),
       ], () => toggleTipo(t)));
     });
 
@@ -1130,7 +1366,7 @@ body:has(.sel-bar:not([hidden])) { padding-bottom: calc(var(--sel-h, 0px) + 24px
       const meseFmt = searching ? monthFmt : formatoMese(P.start, P.end);
       raggruppa(inMonth, r => perMese ? r.data.slice(0, 7) : r.data).forEach((items, d) => {
         const titolo = perMese ? meseFmt.format(parseDate(d + "-01")) : dayFmt.format(parseDate(d));
-        const totale = euro(somme(items).v);
+        const s = somme(items), totale = testoSomma(s.v, s.av, s.nv);
         list.append(el("div", "day",
           el("h3", null, el("span", null, titolo), el("span", "num", totale)),
           el("ul", null, ...items.map(r => rowEl(r, conConto)))));
@@ -1143,6 +1379,7 @@ body:has(.sel-bar:not([hidden])) { padding-bottom: calc(var(--sel-h, 0px) + 24px
     renderQuick();
     aggiornaBarraSel();
     aggiornaIndietro();
+    cercaCambioOggi();
   }
 
   // ---- Aggiunta rapida: esercenti più frequenti, compila tutto tranne il prezzo ----
@@ -1249,17 +1486,26 @@ body:has(.sel-bar:not([hidden])) { padding-bottom: calc(var(--sel-h, 0px) + 24px
     let classi = "row";
     if (r.id === editingId) classi += " editing"; else if (r.id === freshId) classi += " fresh";
     if (inSel) classi += scelta ? " in-sel scelta" : " in-sel";
-    const li = el("li", classi, who, el("div", "amt", euro(r.prezzoCent)), lato);
+    const li = el("li", classi, who, el("div", "amt", testoImporto(r), sottoImporto(r)), lato);
     idDiRiga.set(li, r.id);
     return li;
+  }
+
+  // Importo della riga (e del titolo della foto): com'è salvato, nella valuta di base della spesa
+  const testoImporto = (r) => importo(r.prezzoCent, baseDi(r));
+  // Sotto, in piccolo: il valore al cambio di oggi (spesa di un'altra valuta di base) o l'importo nella valuta estera
+  function sottoImporto(r) {
+    if (!discrepante(r)) return estera(r) ? el("small", null, importo(r.importoOrig, r.valuta)) : null;
+    const x = valoreIn(r, valutaBase, cambioDiOggi());
+    return el("small", "disc", Number.isFinite(x) ? "≈ " + inBase(x) : "cambio non disponibile");
   }
 
   function startEdit(r) {
     editingId = r.id; pendingDelete = null;
     $("f-tipo").value = r.tipologia || "";
     $("f-eserc").value = r.esercente || "";
-    $("f-prezzo").value = centsToInput(r.prezzoCent || 0);
     $("f-data").value = r.data || today();
+    prezzoInModifica(r);
     $("f-off").checked = !!r.offerto;
     $("f-nota").value = r.nota || ""; updNotaCnt();
     $("f-conto").value = contoOf(r);
@@ -1275,12 +1521,175 @@ body:has(.sel-bar:not([hidden])) { padding-bottom: calc(var(--sel-h, 0px) + 24px
     const keepDate = $("f-data").value || today();
     $("form").reset();
     $("f-data").value = keepDate;
+    modulo.disc = null; impostaValuta(valutaBase);  // toglie anche la nota di Conforma
     $("f-conto").value = contoPredefinito();
     updNotaCnt();
     fotoInAttesa = null; $("formFoto").hidden = true;
     $("formTitle").textContent = "Nuova spesa";
     $("save").textContent = "Aggiungi";
   }
+
+  // ---- Valuta nel modulo ----
+  // base: valuta in cui si salva il prezzo (quella di base; per una spesa di un'altra valuta di base aperta in modifica,
+  // la sua, finché non si conforma o si sceglie una valuta). valuta: quella del prezzo scritto.
+  // manuale: cambio o prezzo nella valuta di base scritti a mano. disc: spesa di un'altra valuta di base aperta in modifica.
+  // richiesta: numero dell'ultima ricerca del cambio (le risposte superate si scartano)
+  // conformata: testo che resta in #discBox dopo Conforma (con quale cambio), fino a Salva o Annulla
+  const modulo = { base: "EUR", valuta: "EUR", manuale: false, disc: null, conformata: "", richiesta: 0 };
+  const cambioMsg = messaggio("cambioMsg", "form-msg cambio-msg");
+  // Importo scritto, arrotondato come si scrive nella sua valuta
+  const campoImporto = () => { const A = parsePrice($("f-prezzo").value); return Number.isNaN(A) ? A : arrotonda(A, modulo.valuta); };
+  const campoPrezzoBase = () => parsePrice($("f-prezzo-base").value);
+  function mostraValuta() {
+    const { base, valuta } = modulo, b = $("f-valuta");
+    b.querySelector("span").textContent = simbolo(valuta);
+    b.setAttribute("aria-label", `Valuta: ${nomeValuta(valuta)} (${valuta})`);
+    $("cambioBox").hidden = valuta === base;
+    $("cambioLab").textContent = `1 ${base} = … ${valuta}`;
+    $("prezzoBaseLab").textContent = `Prezzo in ${base}`;
+    $("discBox").hidden = !modulo.disc && !modulo.conformata;
+    $("f-conforma").hidden = !modulo.disc;
+    if (modulo.conformata) $("discTesto").textContent = modulo.conformata;
+  }
+  // Valuta del prezzo scritto; con una valuta estera si cerca il cambio (cerca = false: i campi li riempie chi chiama)
+  function impostaValuta(valuta, base = valutaBase, cerca = true) {
+    Object.assign(modulo, { base, valuta, manuale: false, conformata: "" });
+    modulo.richiesta++;
+    $("f-cambio").value = ""; $("f-prezzo-base").value = ""; cambioMsg("");
+    mostraValuta();
+    if (cerca && valuta !== base) cercaCambio();
+  }
+  // Campi della valuta estera già noti: importo, cambio e prezzo nella valuta di base
+  function riempiEstera(importoOrig, cambio, prezzoCent) {
+    $("f-prezzo").value = centsToCampo(importoOrig, modulo.valuta);
+    $("f-cambio").value = testoCambio(cambio);
+    $("f-prezzo-base").value = centsToCampo(prezzoCent, modulo.base);
+  }
+  // Importo o cambio toccati: prezzo nella valuta di base = importo / cambio
+  function calcolaPrezzoBase() {
+    const A = campoImporto(), C = parseNumero($("f-cambio").value);
+    if (Number.isNaN(A) || !(C > 0)) return;
+    $("f-prezzo-base").value = centsToCampo(arrotonda(A / C, modulo.base), modulo.base);
+  }
+  // Prezzo nella valuta di base toccato: cambio = importo / prezzo (6 cifre significative)
+  function calcolaCambio() {
+    const A = campoImporto(), P = campoPrezzoBase();
+    if (Number.isNaN(A) || !(P > 0)) return;
+    $("f-cambio").value = testoCambio(seiCifre(A / P));
+  }
+  // Cambio del giorno scritto nel modulo (o l'ultimo disponibile: il messaggio dice di che giorno è)
+  async function cercaCambio() {
+    const n = ++modulo.richiesta, { base, valuta } = modulo;
+    cambioMsg("Cerco il cambio…");
+    const tab = await tabellaDel($("f-data").value);
+    if (n !== modulo.richiesta) return;
+    const c = seiCifre(tasso(tab && tab.t, base, valuta));
+    if (!(c > 0)) { cambioMsg(`Non disponibile: scrivilo a mano o scrivi il prezzo in ${base}`, true); return; }
+    $("f-cambio").value = testoCambio(c);
+    calcolaPrezzoBase();
+    cambioMsg(`Cambio del ${dataIt(tab.d)}`);
+  }
+  // Cambio o prezzo nella valuta di base scritti a mano: valgono loro, una ricerca in corso si scarta
+  function aMano(calcola) { modulo.manuale = true; modulo.richiesta++; cambioMsg(""); calcola(); }
+  $("f-prezzo").addEventListener("input", () => { if (modulo.valuta !== modulo.base) calcolaPrezzoBase(); });
+  $("f-cambio").addEventListener("input", () => aMano(calcolaPrezzoBase));
+  $("f-prezzo-base").addEventListener("input", () => aMano(calcolaCambio));
+  $("f-data").addEventListener("change", () => { if (modulo.valuta !== modulo.base && !modulo.manuale) cercaCambio(); });
+  // Prezzo di una spesa aperta in modifica. Di un'altra valuta di base: com'è salvato, con Conforma;
+  // in valuta estera: importo, cambio e prezzo salvati (il cambio si cerca di nuovo solo se cambia la data)
+  function prezzoInModifica(r) {
+    modulo.disc = discrepante(r) ? r : null;
+    if (modulo.disc) {
+      impostaValuta(baseDi(r), baseDi(r));
+      $("f-prezzo").value = centsToCampo(r.prezzoCent || 0, baseDi(r));
+      const x = valoreIn(r, valutaBase, cambioDiOggi());
+      $("discTesto").textContent = `Spesa in ${baseDi(r)}` + (Number.isFinite(x) ? `; ≈ ${inBase(x)} al cambio di oggi` : "");
+    } else if (estera(r)) {
+      impostaValuta(r.valuta, valutaBase, false);
+      riempiEstera(r.importoOrig, r.cambio, r.prezzoCent || 0);
+    } else {
+      impostaValuta(valutaBase);
+      $("f-prezzo").value = centsToCampo(r.prezzoCent || 0, valutaBase);
+    }
+  }
+  // Conforma: il modulo prende l'importo convertito nella valuta di base, al cambio del giorno della spesa
+  // (se manca, all'ultimo disponibile, e #discBox dice quale); vale con Salva.
+  // Spesa da convertire: quella salvata, oppure, se l'importo è stato cambiato a mano, quell'importo
+  const daConformare = (r, importoCent) => importoCent === r.prezzoCent ? r : { valutaBase: baseDi(r), prezzoCent: importoCent };
+  // Il modulo mostra la spesa conformata c, con la nota sul cambio usato (tab: tabella usata, o null se non serviva)
+  function mostraConformata(c, tab, data) {
+    modulo.disc = null;
+    if (c.valuta) { impostaValuta(c.valuta, valutaBase, false); riempiEstera(c.importoOrig, c.cambio, c.prezzoCent); }
+    else { impostaValuta(valutaBase); $("f-prezzo").value = centsToCampo(c.prezzoCent, valutaBase); }
+    if (tab && c.valuta) cambioMsg(`Cambio del ${dataIt(tab.d)}`);
+    modulo.conformata = `Convertita in ${valutaBase}` + (tab ? " " + alCambioDel(tab, data) : "") + ". Premi Salva per confermare.";
+    mostraValuta();
+  }
+  $("f-conforma").addEventListener("click", async () => {
+    const r = modulo.disc, importoCent = campoImporto(), data = $("f-data").value;
+    if (!r) return;
+    if (Number.isNaN(importoCent)) { setMsg("Prezzo non valido: scrivi ad esempio 12,50.", true); return; }
+    const sorgente = daConformare(r, importoCent);
+    let tab = null;
+    if (serveCambio(sorgente, valutaBase)) {
+      setMsg("Cerco il cambio…");
+      tab = await tabellaDel(data);
+      if (modulo.disc !== r) return;
+    }
+    const c = conformata(sorgente, valutaBase, tab && tab.t);
+    if (!c) { setMsg("Cambio non disponibile.", true); return; }
+    setMsg("");
+    mostraConformata(c, tab, data);
+  });
+  // Scelta a mano della valuta: si torna alla regola normale, rispetto alla valuta di base
+  $("f-valuta").addEventListener("click", async () => {
+    const v = await sceltaValuta(modulo.valuta, "Valuta del prezzo");
+    if (!v || (v === modulo.valuta && !modulo.disc && !modulo.conformata)) return;
+    modulo.disc = null;
+    impostaValuta(v);
+  });
+  // Campi del prezzo come li ha scritti l'utente (NaN dove manca un numero valido)
+  const campiPrezzo = () => ({ importoCent: campoImporto(), cambioScritto: parseNumero($("f-cambio").value), prezzoBaseCent: arrotonda(campoPrezzoBase(), modulo.base) });
+  // Prezzo scritto nella valuta di base. old: spesa in modifica; se il prezzo è quello di prima, nella stessa
+  // valuta di base, i suoi campi valuta restano
+  function prezzoNellaBase(importoCent, base, old) {
+    if (old && estera(old) && baseDi(old) === base && old.prezzoCent === importoCent) return { prezzoCent: importoCent, campi: { ...campiBase(base), valuta: old.valuta, importoOrig: old.importoOrig, cambio: old.cambio } };
+    return { prezzoCent: importoCent, campi: campiBase(base) };
+  }
+  // Prezzo scritto in una valuta estera: serve il prezzo nella valuta di base (scritto o calcolato dal cambio), salvo importo zero
+  function prezzoInEstera({ importoCent: importoEstero, cambioScritto, prezzoBaseCent }, base, valuta) {
+    const cambioOk = cambioScritto > 0;
+    if (importoEstero === 0) return { prezzoCent: 0, campi: cambioOk ? { ...campiBase(base), valuta, importoOrig: 0, cambio: cambioScritto } : campiBase(base) };
+    if (!(prezzoBaseCent > 0)) return { errore: `Manca il prezzo in ${base}: scrivi il cambio o il prezzo in ${base}.`, campo: cambioOk ? "f-prezzo-base" : "f-cambio" };
+    return { prezzoCent: prezzoBaseCent, campi: { ...campiBase(base), valuta, importoOrig: importoEstero, cambio: cambioOk ? cambioScritto : seiCifre(importoEstero / prezzoBaseCent) } };
+  }
+  // Prezzo da salvare: { prezzoCent, campi } (campi valuta della spesa), oppure { errore, campo }
+  function prezzoDelModulo(old) {
+    const campi = campiPrezzo(), { base, valuta } = modulo;
+    if (Number.isNaN(campi.importoCent)) return { errore: "Prezzo non valido: scrivi ad esempio 12,50." };
+    return valuta === base ? prezzoNellaBase(campi.importoCent, base, old) : prezzoInEstera(campi, base, valuta);
+  }
+
+  // ---- Finestra delle valute: in alto la base, le ultime usate e le principali (al massimo 8), sotto tutte ----
+  const valutaDlg = $("valutaDlg");
+  const rigaValuta = (v, corrente, scegli) => el("li", null,
+    btn({ className: "valuta-riga", "aria-current": v === corrente ? "true" : null }, [el("b", null, v), el("span", null, nomeValuta(v))], () => scegli(v)));
+  // Risponde con il codice scelto, oppure null (Annulla, Esc, tocco fuori)
+  function sceltaValuta(corrente, titolo) {
+    const inCima = [...new Set([valutaBase, ...valuteRecenti(), ...PRINCIPALI])].slice(0, 8);
+    return new Promise((resolve) => {
+      let scelta = null;
+      const scegli = (v) => { scelta = v; valutaDlg.close(); };
+      $("valutaTitle").textContent = titolo;
+      $("valuteTop").replaceChildren(...inCima.map(v => rigaValuta(v, corrente, scegli)));
+      $("valuteTutte").replaceChildren(...VALUTE.map(v => rigaValuta(v, corrente, scegli)));
+      valutaDlg.addEventListener("close", () => resolve(scelta), { once: true });
+      valutaDlg.showModal();
+      valutaDlg.scrollTop = 0;
+    });
+  }
+  $("valutaAnnulla").addEventListener("click", () => valutaDlg.close());
+  impostaValuta(valutaBase);
 
   function updNotaCnt() {
     const n = $("f-nota").value.length, c = $("notaCnt");
@@ -1339,29 +1748,31 @@ body:has(.sel-bar:not([hidden])) { padding-bottom: calc(var(--sel-h, 0px) + 24px
     ev.preventDefault();
     const tipologia = $("f-tipo").value.trim();
     const esercente = $("f-eserc").value.trim();
-    const prezzoCent = parsePrice($("f-prezzo").value);
     const data = $("f-data").value;
     const offerto = $("f-off").checked;
     const nota = $("f-nota").value.trim().slice(0, 20);
     const conto = conti.some(c => c.id === $("f-conto").value) ? $("f-conto").value : baseId();
     if (!tipologia || !esercente || !data) { setMsg("Compila tipologia, esercente e data.", true); return; }
-    if (Number.isNaN(prezzoCent)) { setMsg("Prezzo non valido: scrivi ad esempio 12,50.", true); $("f-prezzo").focus(); return; }
+    const old = editingId ? rows.find(r => r.id === editingId) || {} : null;
+    const prezzo = prezzoDelModulo(old);
+    if (prezzo.errore) { setMsg(prezzo.errore, true); $(prezzo.campo || "f-prezzo").focus(); return; }
+    const { prezzoCent, campi } = prezzo;
     if (!col) { setMsg("Il salvataggio non è disponibile in questa vista.", true); return; }
     $("save").disabled = true;
     try {
       if (editingId) {
-        const old = rows.find(r => r.id === editingId) || {};
-        await col.doc(editingId).set({ ...old.daScontrino ? { daScontrino: true } : {}, ...old.foto ? { foto: old.foto } : {}, tipologia, esercente, prezzoCent, data, offerto, nota, conto, creato: old.creato || Date.now() });
+        await col.doc(editingId).set({ ...old.daScontrino ? { daScontrino: true } : {}, ...old.foto ? { foto: old.foto } : {}, tipologia, esercente, prezzoCent, data, offerto, nota, conto, creato: old.creato || Date.now(), ...campi });
         esito("Modifica salvata." + (visibili.has(conto) ? "" : ` Ora è nel conto «${nomeConto(conto)}», che non stai guardando.`));
       } else {
         // Spesa nata da uno scontrino letto a metà: la foto (se scelta) si salva solo adesso
         let foto = null, fotoErr = false;
         if (fotoInAttesa) { foto = await salvaFoto(fotoInAttesa); fotoErr = !foto; }
-        await col.add({ tipologia, esercente, prezzoCent, data, offerto, nota, conto, creato: Date.now(), ...foto ? { foto, daScontrino: true } : {} });
+        await col.add({ tipologia, esercente, prezzoCent, data, offerto, nota, conto, creato: Date.now(), ...foto ? { foto, daScontrino: true } : {}, ...campi });
         lsSet("spese.ultimoConto", conto);
         fineModulo(true);
         esito((visibili.has(conto) ? "Spesa aggiunta." : `Spesa aggiunta nel conto «${nomeConto(conto)}», che non stai guardando.`) + (fotoErr ? " La foto dello scontrino non è stata salvata." : ""), fotoErr);
       }
+      if (modulo.valuta !== modulo.base) ricordaValuta(modulo.valuta);
       vaiAlPeriodoDi(parseDate(data));
       // "close" arriva un attimo dopo: il riepilogo deve essere già aggiornato insieme al messaggio
       chiudiSpesa(); esciSpesa();
@@ -1535,7 +1946,7 @@ body:has(.sel-bar:not([hidden])) { padding-bottom: calc(var(--sel-h, 0px) + 24px
   $("addConto").addEventListener("click", aggiungiConto);
   $("nuovoConto").addEventListener("keydown", (e) => { if (e.key === "Enter") { e.preventDefault(); aggiungiConto(); } });
   // tocco fuori dalla finestra: chiude
-  [contiDlg, $("scanDlg"), $("impDlg"), $("expDlg"), $("fotoDlg"), $("gfDlg"), $("selContoDlg"), $("selElimDlg"), $("calDlg")].forEach(d => d.addEventListener("click", (e) => { if (e.target === d) d.close(); }));
+  [contiDlg, $("scanDlg"), $("impDlg"), $("expDlg"), $("fotoDlg"), $("gfDlg"), $("selContoDlg"), $("selElimDlg"), $("calDlg"), $("valutaDlg"), $("selConformaDlg")].forEach(d => d.addEventListener("click", (e) => { if (e.target === d) d.close(); }));
 
   // ---- Finestra prima della foto: (con più conti) la scelta del conto in un riquadro, sotto la casella "salva la foto" ----
   // Toccare un conto lo seleziona soltanto: si conferma con "Fatto", così un tocco sbagliato non salva nulla.
@@ -1926,7 +2337,7 @@ body:has(.sel-bar:not([hidden])) { padding-bottom: calc(var(--sel-h, 0px) + 24px
     if (!r || !r.foto) return;
     fotoDi = id; fotoConferma = false;
     const vista = $("fotoVista");
-    $("fotoTitle").textContent = (esercName(r.esercente) || "Scontrino") + " · " + euro(r.prezzoCent);
+    $("fotoTitle").textContent = (esercName(r.esercente) || "Scontrino") + " · " + testoImporto(r);
     $("fotoElimina").textContent = "Elimina foto"; $("fotoElimina").disabled = false;
     vista.replaceChildren("Carico la foto…");
     if (!fotoDlg.open) fotoDlg.showModal();
@@ -2024,7 +2435,7 @@ body:has(.sel-bar:not([hidden])) { padding-bottom: calc(var(--sel-h, 0px) + 24px
     const voce = {
       tipologia: guessTipologia(p.esercente, text, rows),
       esercente: p.esercente,
-      prezzoCent: p.prezzoCent,
+      prezzoCent: p.prezzoCent && arrotonda(p.prezzoCent, valutaBase),
       data: p.data || today(),
       conto,
     };
@@ -2040,7 +2451,7 @@ body:has(.sel-bar:not([hidden])) { padding-bottom: calc(var(--sel-h, 0px) + 24px
       return "modulo";
     }
     const foto = fotoB64 ? await salvaFoto(fotoB64) : null;
-    const full = { ...voce, offerto: false, creato: Date.now(), daScontrino: true, ...foto ? { foto } : {} };
+    const full = { ...voce, offerto: false, creato: Date.now(), daScontrino: true, ...foto ? { foto } : {}, ...valutaBase !== "EUR" ? { valutaBase } : {} };
     const ref = await col.add(full);
     lsSet("spese.ultimoConto", conto);
     freshId = ref.id;
@@ -2049,7 +2460,7 @@ body:has(.sel-bar:not([hidden])) { padding-bottom: calc(var(--sel-h, 0px) + 24px
     const saved = { id: ref.id, ...full };
     const dove = multiConti() ? ` · in «${nomeConto(conto)}»${visibili.has(conto) ? "" : " (conto che non stai guardando)"}` : "";
     const nf = !vuoleFoto ? "" : foto ? " · foto salvata" : " · foto non salvata";
-    scanStatus(`Aggiunta: ${full.esercente} · ${euro(full.prezzoCent)} · ${dayFmt.format(parseDate(full.data))}${p.data ? "" : " (data di oggi)"}${dove}${nf}${nota ? ". " + nota : ""}`, {
+    scanStatus(`Aggiunta: ${full.esercente} · ${testoImporto(full)} · ${dayFmt.format(parseDate(full.data))}${p.data ? "" : " (data di oggi)"}${dove}${nf}${nota ? ". " + nota : ""}`, {
       actions: [
         ["Modifica", () => { scanStatus(""); startEdit(saved); }],
         ["Annulla", async () => {
@@ -2169,7 +2580,7 @@ body:has(.sel-bar:not([hidden])) { padding-bottom: calc(var(--sel-h, 0px) + 24px
     resetForm();
     if (v.tipologia) $("f-tipo").value = v.tipologia;
     if (v.esercente) $("f-eserc").value = v.esercente;
-    if (v.prezzoCent) $("f-prezzo").value = centsToInput(v.prezzoCent);
+    if (v.prezzoCent) $("f-prezzo").value = centsToCampo(v.prezzoCent, valutaBase);
     if (v.data) $("f-data").value = v.data;
     if (v.conto) $("f-conto").value = v.conto;
     apriSpesa();
@@ -2206,12 +2617,13 @@ body:has(.sel-bar:not([hidden])) { padding-bottom: calc(var(--sel-h, 0px) + 24px
     const lista = speseScelte(), n = lista.length;
     selBar.hidden = !n && !selEsito;
     $("selAzioni").hidden = !n;
-    const { v, g } = somme(lista);
+    const { v, g, av, ag, nv, ng } = somme(lista);
     if (selEsito) selInfo(selEsito.t, selEsito.err);
-    else selInfo(`${speseVerbo(n, "selezionata", "selezionate")} · ${euro(v)}` + (g ? ` + ${euro(g)} offerto` : ""));
+    else selInfo(`${speseVerbo(n, "selezionata", "selezionate")} · ${testoSomma(v, av, nv)}` + (g || ng ? ` + ${testoSomma(g, ag, ng)} offerto` : ""));
     $("selTutte").textContent = tutteScelte() ? "Deseleziona tutte" : "Seleziona tutte";
     $("selConto").hidden = !multiConti();
     $("selOfferto").textContent = tuttiOfferti(lista) ? "Non offerto" : "Offerto";
+    $("selConforma").hidden = !lista.some(discrepante);
     selBar.querySelectorAll("button").forEach(b => { b.disabled = selBusy; });
     // sulla radice (html), così body resta com'è a riposo
     const radice = document.documentElement.style;
@@ -2256,11 +2668,15 @@ body:has(.sel-bar:not([hidden])) { padding-bottom: calc(var(--sel-h, 0px) + 24px
 
   // Un'azione sulle spese scelte, con un solo salvataggio: cambia(ids) risponde con il nuovo elenco delle spese.
   // Gli id si rileggono dentro la fila (una spesa può essere sparita nel frattempo). testo(n): esito nella barra.
+  // prepara (facoltativo): passo asincrono prima del salvataggio, con la barra ferma; risponde true per andare avanti,
+  // null per lasciar perdere (la selezione resta), oppure un testo d'errore da mostrare nella barra.
   // Se riesce si esce dalla selezione; se no la selezione resta e la barra lo dice. Risponde true se è stato salvato
-  async function suSelezione(cambia, testo) {
+  async function suSelezione(cambia, testo, prepara) {
     let n = 0;
     selBusy = true; nascondiEsitoSel(); aggiornaBarraSel();
     try {
+      const pronto = prepara ? await prepara() : true;
+      if (pronto !== true) { if (pronto) selEsito = { t: pronto, err: true }; return false; }
       const fatto = await modifica(() => {
         const ids = new Set(store.filter(r => selezione.has(r.id)).map(r => r.id));
         n = ids.size;
@@ -2300,9 +2716,9 @@ body:has(.sel-bar:not([hidden])) { padding-bottom: calc(var(--sel-h, 0px) + 24px
   $("selElimina").addEventListener("click", async () => {
     const lista = speseScelte();
     if (!lista.length) return;
-    const { v, g } = somme(lista), nFoto = lista.filter(r => r.foto).length;
+    const { v, g, av, ag, nv, ng } = somme(lista), nFoto = lista.filter(r => r.foto).length;
     $("selElimTitle").textContent = `Eliminare ${spese(lista.length)}?`;
-    $("selElimSomma").textContent = euro(v) + (g ? ` (+ ${euro(g)} offerto)` : "");
+    $("selElimSomma").textContent = testoSomma(v, av, nv) + (g || ng ? ` (+ ${testoSomma(g, ag, ng)} offerto)` : "");
     $("selElimFoto").hidden = !nFoto;
     $("selElimFoto").textContent = nFoto === 1 ? "Verrà eliminata anche 1 foto di scontrino." : `Verranno eliminate anche ${nFoto} foto di scontrini.`;
     if (!await chiedi($("selElimDlg"), "selElimOk", "selElimAnnulla", () => true)) return;
@@ -2313,6 +2729,40 @@ body:has(.sel-bar:not([hidden])) { padding-bottom: calc(var(--sel-h, 0px) + 24px
       return store.filter(r => !ids.has(r.id));
     }, (n) => `${speseVerbo(n, "eliminata", "eliminate")}.`);
     if (fatto) foto.forEach(f => cancellaFoto(f));
+  });
+
+  // Conforma: le spese scelte di un'altra valuta di base diventano come se fossero state inserite con quella attuale,
+  // al cambio del giorno di ciascuna. Le altre restano come sono
+  // Tabelle dei cambi dei giorni delle spese (scaricate insieme): Map data -> tabella, oppure null se ne manca una
+  async function tabelleDelleSpese(lista) {
+    const date = [...new Set(lista.filter(r => serveCambio(r, valutaBase)).map(r => r.data))];
+    const tabelle = await Promise.all(date.map(tabellaDel));
+    return tabelle.every(Boolean) ? new Map(date.map((d, i) => [d, tabelle[i]])) : null;
+  }
+  // Nella conferma: quante spese usano il cambio di un altro giorno, perché quello del loro giorno non c'è
+  function avvisoAltriGiorni(lista, tabelle) {
+    const perData = contaPer(lista.filter(r => tabelle.has(r.data) && tabelle.get(r.data).d !== r.data), r => tabelle.get(r.data).d);
+    return [...perData].map(([d, n]) => ` ${spese(n)} al cambio del ${dataIt(d)}, perché quello del ${n === 1 ? "suo" : "loro"} giorno non è disponibile.`).join("");
+  }
+  $("selConforma").addEventListener("click", () => {
+    const lista = speseScelte().filter(discrepante);
+    if (!lista.length) return;
+    let tabelle = null, n = 0;
+    const prepara = async () => {
+      selEsito = { t: "Cerco il cambio…" }; aggiornaBarraSel();
+      tabelle = await tabelleDelleSpese(lista);
+      nascondiEsitoSel(); aggiornaBarraSel();
+      if (!tabelle) return "Cambio non disponibile";
+      $("selConformaTitle").textContent = `Conformare ${spese(lista.length)}?`;
+      $("selConformaTesto").textContent = `${lista.length === 1 ? "Verrà convertita" : "Verranno convertite"} in ${valutaBase} al cambio del giorno della spesa: non si torna indietro.` + avvisoAltriGiorni(lista, tabelle);
+      return await chiedi($("selConformaDlg"), "selConformaOk", "selConformaAnnulla", () => true) ? true : null;
+    };
+    const dopo = (r) => { const tab = tabelle.get(r.data); return conformata(r, valutaBase, tab && tab.t); };
+    suSelezione((ids) => store.map(r => {
+      const c = ids.has(r.id) && discrepante(r) && dopo(r);
+      if (c) n++;
+      return c || r;
+    }), () => `${speseVerbo(n, "conformata", "conformate")} a ${valutaBase}.`, prepara);
   });
 
   // ---- Tasto Indietro di Android (plugin App, solo negli APK che lo hanno) ----
@@ -2371,23 +2821,43 @@ body:has(.sel-bar:not([hidden])) { padding-bottom: calc(var(--sel-h, 0px) + 24px
     condividi(`registro-spese-${stamp()}.json`, JSON.stringify(archivio(), null, 1), "Backup Registro Spese", true)));
 
   // ---- Esportazione Excel (.xlsx) ----
+  // Formato dei numeri di una valuta: '#,##0.00 "€"' (come prima), '#,##0.00 "TRY"', '#,##0 "JPY"'
+  const formatoExcel = (v) => `#,##0${SENZA_DECIMALI.has(v) ? "" : ".00"} "${v === "EUR" ? "€" : v}"`;
+  // Date come numero di serie Excel (indipendente dal fuso orario del telefono)
+  const serialeExcel = (s) => { const [y, m, d] = s.split("-").map(Number); return (Date.UTC(y, m - 1, d) - Date.UTC(1899, 11, 30)) / 86400000; };
+  // Importo e valuta "originali" di una spesa: quelli scritti in valuta estera, o quelli salvati in un'altra valuta di base
+  const originale = (r) => estera(r) ? { cent: r.importoOrig, valuta: r.valuta } : discrepante(r) ? { cent: r.prezzoCent || 0, valuta: baseDi(r) } : null;
+  // Una riga del foglio. Importo nella valuta di base attuale (le spese di un'altra valuta di base al cambio di oggi, t)
+  function rigaExcel(r, t, conConto, conOrig) {
+    const x = valoreIn(r, valutaBase, t), o = conOrig ? originale(r) : null;
+    return [serialeExcel(r.data), r.tipologia ? tipoName(tipoKey(r)) : "", esercName(r.esercente), r.nota || "", Number.isFinite(x) ? x / 100 : null, r.offerto ? "Sì" : "No",
+      ...(conConto ? [nomeConto(contoOf(r))] : []), ...(conOrig ? (o ? [o.cent / 100, o.valuta] : [null, null]) : [])];
+  }
   function buildWorkbook(items, conConto) {
     const X = window.XLSX;
-    const EUR = '#,##0.00 "€"';
+    const formatoBase = formatoExcel(valutaBase);
     const data = items.filter(r => r.data).sort(piuVecchie);
-    const aoa = [["Data", "Tipologia", "Esercente", "Nota", "Importo", "Offerto", ...(conConto ? ["Conto"] : [])]];
-    // Date come numero di serie Excel (indipendente dal fuso orario del telefono)
-    const serial = (s) => { const [y, m, d] = s.split("-").map(Number); return (Date.UTC(y, m - 1, d) - Date.UTC(1899, 11, 30)) / 86400000; };
-    data.forEach(r => aoa.push([serial(r.data), r.tipologia ? tipoName(tipoKey(r)) : "", esercName(r.esercente), r.nota || "", (r.prezzoCent || 0) / 100, r.offerto ? "Sì" : "No", ...(conConto ? [nomeConto(contoOf(r))] : [])]));
+    // Colonne "Importo originale" e "Valuta" solo se tra le righe ce n'è una in valuta estera o di un'altra valuta di base
+    const conOrig = data.some(r => estera(r) || discrepante(r));
+    const aoa = [["Data", "Tipologia", "Esercente", "Nota", "Importo", "Offerto", ...(conConto ? ["Conto"] : []), ...(conOrig ? ["Importo originale", "Valuta"] : [])]];
+    const t = cambioDiOggi();
+    data.forEach(r => aoa.push(rigaExcel(r, t, conConto, conOrig)));
     const ws = X.utils.aoa_to_sheet(aoa);
     const last = data.length + 1;
-    for (let i = 2; i <= last; i++) { if (ws["A" + i]) ws["A" + i].z = "dd/mm/yyyy"; if (ws["E" + i]) ws["E" + i].z = EUR; }
-    const somma = somme(data), tot = somma.v / 100, off = somma.g / 100;
+    // colonna dell'importo originale (lettera) e valuta di ogni riga, per il suo formato
+    const iOrig = conOrig ? X.utils.encode_col(conConto ? 7 : 6) : null;
+    const valuteOrig = data.map(r => { const o = conOrig && originale(r); return o ? o.valuta : null; });
+    for (let i = 2; i <= last; i++) {
+      if (ws["A" + i]) ws["A" + i].z = "dd/mm/yyyy";
+      if (ws["E" + i]) ws["E" + i].z = formatoBase;
+      if (valuteOrig[i - 2] && ws[iOrig + i]) ws[iOrig + i].z = formatoExcel(valuteOrig[i - 2]);
+    }
+    const tot = somme(data), totale = tot.v / 100, off = tot.g / 100;
     X.utils.sheet_add_aoa(ws, [
-      ["Totale (escluse offerte)", "", "", "", { t: "n", v: tot, f: `SUMIF(F2:F${last},"No",E2:E${last})`, z: EUR }, ""],
-      ["Offerto", "", "", "", { t: "n", v: off, f: `SUMIF(F2:F${last},"Sì",E2:E${last})`, z: EUR }, ""],
+      ["Totale (escluse offerte)", "", "", "", { t: "n", v: totale, f: `SUMIF(F2:F${last},"No",E2:E${last})`, z: formatoBase }, ""],
+      ["Offerto", "", "", "", { t: "n", v: off, f: `SUMIF(F2:F${last},"Sì",E2:E${last})`, z: formatoBase }, ""],
     ], { origin: "A" + (last + 1) });
-    ws["!cols"] = [{ wch: 11 }, { wch: 16 }, { wch: 26 }, { wch: 22 }, { wch: 12 }, { wch: 8 }, ...(conConto ? [{ wch: 16 }] : [])];
+    ws["!cols"] = [{ wch: 11 }, { wch: 16 }, { wch: 26 }, { wch: 22 }, { wch: 12 }, { wch: 8 }, ...(conConto ? [{ wch: 16 }] : []), ...(conOrig ? [{ wch: 16 }, { wch: 7 }] : [])];
     const wb = X.utils.book_new();
     X.utils.book_append_sheet(wb, ws, "Spese");
     return X.write(wb, { bookType: "xlsx", type: "base64" });
@@ -2476,7 +2946,7 @@ body:has(.sel-bar:not([hidden])) { padding-bottom: calc(var(--sel-h, 0px) + 24px
           if (!r || !r.data || !Number.isFinite(Number(r.prezzoCent))) return;
           if (r.id && have.has(r.id)) return; // già presente
           const id = r.id ? String(r.id) : newId();
-          nuovo.push({ id, tipologia: String(r.tipologia || "Altro"), esercente: String(r.esercente || ""), prezzoCent: Number(r.prezzoCent), data: String(r.data), offerto: !!r.offerto, nota: String(r.nota || "").slice(0, 20), conto: mappa.get(String(r.conto || CONTO_BASE)) || baseId(), creato: Number(r.creato) || Date.now() });
+          nuovo.push({ id, tipologia: String(r.tipologia || "Altro"), esercente: String(r.esercente || ""), prezzoCent: Number(r.prezzoCent), data: String(r.data), offerto: !!r.offerto, nota: String(r.nota || "").slice(0, 20), conto: mappa.get(String(r.conto || CONTO_BASE)) || baseId(), creato: Number(r.creato) || Date.now(), ...campiValuta(r) });
           have.add(id); added++;
         });
         return { store: nuovo, conti: elenco, visibili: aggiunti.length ? (vis) => aggiunti.forEach(id => vis.add(id)) : null };
@@ -2939,7 +3409,7 @@ body:has(.sel-bar:not([hidden])) { padding-bottom: calc(var(--sel-h, 0px) + 24px
     return { inclusi, mancanti };
   }
   $("impBtn").addEventListener("click", () => {
-    backupMsg(""); fotoMsg(""); aggEsito(null);
+    backupMsg(""); fotoMsg(""); valutaMsg(""); aggEsito(null);
     aggiornaSpazioFoto();
     impDlg.showModal();
   });
@@ -2957,6 +3427,28 @@ body:has(.sel-bar:not([hidden])) { padding-bottom: calc(var(--sel-h, 0px) + 24px
     applicaTema(scelta);
     mostraTema();
   }
+  // Valuta di base: vale subito, le spese salvate non si toccano. Se qualche spesa resterebbe in un'altra valuta di base
+  // serve il cambio di oggi (dalla rete o già scaricato), altrimenti la base non cambia
+  const valutaMsg = messaggio("valutaMsg", "form-msg");
+  function mostraValutaBase() { $("valutaBaseBtn").textContent = `${valutaBase} · ${nomeValuta(valutaBase)}`; }
+  $("valutaBaseBtn").addEventListener("click", async () => {
+    valutaMsg("");
+    const v = await sceltaValuta(valutaBase, "Valuta di base");
+    if (!v || v === valutaBase) return;
+    if (store.some(r => baseDi(r) !== v)) {
+      valutaMsg("Cerco il cambio…");
+      const tab = await tabellaOggi();
+      const servono = [...new Set(store.map(baseDi))];
+      if (!tab || servono.some(b => !(tasso(tab.t, b, v) > 0))) { valutaMsg("Serve internet per cambiare la valuta di base", true); return; }
+    }
+    valutaBase = v;
+    lsSet("spese.valutaBase", v === "EUR" ? null : v);
+    mostraValutaBase();
+    valutaMsg(`Totali, grafico ed Excel ora sono in ${v}.`);
+    render();
+  });
+  mostraValutaBase();
+
   temaTelefono.addEventListener("change", mostraTema);
   $("temaScuro").addEventListener("change", (e) => scegliTema(e.target.checked ? "dark" : "light"));
   $("temaSistema").addEventListener("click", () => scegliTema(null));
