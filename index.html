@@ -411,7 +411,6 @@ dialog.dlg-foto { width: min(560px, calc(100% - 16px)); max-height: calc(100% - 
 .form-foto svg { color: var(--accent); flex: none; }
 .gf-testa { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; font-size: .82rem; color: var(--muted); margin-bottom: -4px; }
 .gf-testa .link { font-size: .82rem; }
-#gfOk.danger-btn { padding: 10px 16px; }
 #gfDopoBox span { font-weight: 500; font-size: .9rem; }
 
 /* Selezione multipla: pressione lunga su una riga, poi barra fissa in basso con le azioni.
@@ -431,6 +430,8 @@ dialog.dlg-foto { width: min(560px, calc(100% - 16px)); max-height: calc(100% - 
 .sel-azioni button { flex: 1 1 auto; padding: 8px 10px; font-size: .86rem; font-weight: 600; }
 .sel-azioni button:disabled, .sel-bar .chiudi:disabled { opacity: .5; cursor: default; }
 .sel-azioni .sel-elimina { color: var(--danger); border-color: var(--danger); }
+/* Finestra "Nota" della selezione: le spese dove la nota non ci sta, nel colore del contatore pieno */
+.nota-spazio .avviso { color: var(--gift); }
 /* margine in fondo pari all'altezza vera della barra (--sel-h, la misura aggiornaBarraSel), così l'ultima riga non resta coperta */
 body:has(.sel-bar:not([hidden])) { padding-bottom: calc(var(--sel-h, 0px) + 24px + env(safe-area-inset-bottom, 0px)); }
 
@@ -595,6 +596,8 @@ body:has(.sel-bar:not([hidden])) { padding-bottom: calc(var(--sel-h, 0px) + 24px
     <button type="button" class="ghost" id="selConto">Conto</button>
     <button type="button" class="ghost" id="selOfferto">Offerto</button>
     <button type="button" class="ghost" id="selConforma" hidden>Conforma</button>
+    <button type="button" class="ghost" id="selNota">Nota</button>
+    <button type="button" class="ghost" id="selEliminaFoto" hidden>Elimina foto</button>
     <button type="button" class="ghost sel-elimina" id="selElimina">Elimina</button>
   </div>
 </div>
@@ -625,7 +628,7 @@ body:has(.sel-bar:not([hidden])) { padding-bottom: calc(var(--sel-h, 0px) + 24px
       <p id="fotoSpazio"></p>
       <div class="backup-actions">
         <button type="button" class="ghost" id="fotoEsporta">Esporta foto</button>
-        <button type="button" class="ghost" id="fotoEliminaSel">Elimina foto</button>
+        <button type="button" class="ghost" id="fotoEliminaSel">Elimina tutte le foto</button>
       </div>
       <span class="form-msg" id="fotoMsg" role="status"></span>
     </section>
@@ -740,6 +743,18 @@ body:has(.sel-bar:not([hidden])) { padding-bottom: calc(var(--sel-h, 0px) + 24px
     <p class="dlg-sub" id="selElimSomma"></p>
     <p class="dlg-sub" id="selElimFoto" hidden></p>
     <div class="dlg-actions"><button type="button" class="ghost" id="selElimAnnulla">Annulla</button><button type="button" class="danger-btn" id="selElimOk">Elimina</button></div>
+  </div>
+</dialog>
+
+<dialog class="dlg" id="selNotaDlg" aria-labelledby="selNotaTitle">
+  <div class="dlg-body">
+    <h2 id="selNotaTitle">Aggiungi una nota</h2>
+    <div class="field">
+      <label for="selNotaTesto" class="lab-row">Nota <span class="cnt" id="selNotaCnt">0/20</span></label>
+      <input type="text" id="selNotaTesto" maxlength="20" placeholder="Max 20 caratteri" autocomplete="off">
+    </div>
+    <p class="dlg-sub nota-spazio" id="selNotaSpazio" role="status"></p>
+    <div class="dlg-actions"><button type="button" class="ghost" id="selNotaAnnulla">Annulla</button><button type="button" class="primary" id="selNotaOk">Fatto</button></div>
   </div>
 </dialog>
 
@@ -1802,10 +1817,13 @@ body:has(.sel-bar:not([hidden])) { padding-bottom: calc(var(--sel-h, 0px) + 24px
   $("valutaAnnulla").addEventListener("click", () => valutaDlg.close());
   impostaValuta(valutaBase);
 
-  function updNotaCnt() {
-    const n = $("f-nota").value.length, c = $("notaCnt");
-    c.textContent = `${n}/20`; c.className = "cnt" + (n >= 20 ? " full" : "");
+  // Contatore n/20 accanto all'etichetta "Nota" (modulo e finestra della selezione)
+  const NOTA_MAX = 20;
+  function contaNota(campo, c) {
+    const n = campo.value.length;
+    c.textContent = `${n}/${NOTA_MAX}`; c.className = "cnt" + (n >= NOTA_MAX ? " full" : "");
   }
+  function updNotaCnt() { contaNota($("f-nota"), $("notaCnt")); }
   $("f-nota").addEventListener("input", updNotaCnt);
 
   let esitoTimer = null;
@@ -2059,7 +2077,7 @@ body:has(.sel-bar:not([hidden])) { padding-bottom: calc(var(--sel-h, 0px) + 24px
   $("addConto").addEventListener("click", aggiungiConto);
   $("nuovoConto").addEventListener("keydown", (e) => { if (e.key === "Enter") { e.preventDefault(); aggiungiConto(); } });
   // tocco fuori dalla finestra: chiude
-  [contiDlg, $("scanDlg"), $("impDlg"), $("expDlg"), $("fotoDlg"), $("gfDlg"), $("selContoDlg"), $("selElimDlg"), $("calDlg"), $("valutaDlg"), listaDlg, $("selConformaDlg")].forEach(d => d.addEventListener("click", (e) => { if (e.target === d) d.close(); }));
+  [contiDlg, $("scanDlg"), $("impDlg"), $("expDlg"), $("fotoDlg"), $("gfDlg"), $("selContoDlg"), $("selElimDlg"), $("calDlg"), $("valutaDlg"), listaDlg, $("selConformaDlg"), $("selNotaDlg")].forEach(d => d.addEventListener("click", (e) => { if (e.target === d) d.close(); }));
 
   // ---- Finestra prima della foto: (con più conti) la scelta del conto in un riquadro, sotto la casella "salva la foto" ----
   // Toccare un conto lo seleziona soltanto: si conferma con "Fatto", così un tocco sbagliato non salva nulla.
@@ -2477,6 +2495,18 @@ body:has(.sel-bar:not([hidden])) { padding-bottom: calc(var(--sel-h, 0px) + 24px
     if (!FS || !path) return Promise.resolve();
     return FS.deleteFile({ path, directory: "DATA" }).catch(() => {});
   }
+  // Le spese con l'id in ids perdono il campo "foto" (il resto com'è, id in testa come lo scrive l'app).
+  // Risponde { store: nuovo elenco delle spese, file: percorsi delle foto tolte }
+  function speseSenzaFoto(ids) {
+    const file = [];
+    const nuovo = store.map(r => {
+      if (!ids.has(r.id) || !r.foto) return r;
+      const { id, foto, ...d } = r;
+      file.push(foto);
+      return { id, ...d };
+    });
+    return { store: nuovo, file };
+  }
   // Quante foto ci sono e quanto spazio occupano
   async function spazioFoto() {
     if (!FS) return null;
@@ -2520,17 +2550,11 @@ body:has(.sel-bar:not([hidden])) { padding-bottom: calc(var(--sel-h, 0px) + 24px
     const id = fotoDi;
     if (!store.some(x => x.id === id)) { fotoDlg.close(); return; }
     b.disabled = true;
-    let foto = null;
     try {
-      // la spesa resta com'è, senza il campo "foto" (scritta come prima: id in testa)
-      await modifica(() => ({ store: store.map(r => {
-        if (r.id !== id) return r;
-        const { id: _, foto: f, ...d } = r;
-        foto = f;
-        return { id, ...d };
-      }) }));
+      // la spesa resta com'è, senza il campo "foto"
+      const { file } = await modifica(() => speseSenzaFoto(new Set([id])));
       render();
-      cancellaFoto(foto);
+      file.forEach(f => cancellaFoto(f));
       fotoDlg.close(); esito("Foto dello scontrino eliminata. La spesa resta.");
     } catch (e) { b.disabled = false; b.textContent = "Riprova"; }
   });
@@ -2782,6 +2806,7 @@ body:has(.sel-bar:not([hidden])) { padding-bottom: calc(var(--sel-h, 0px) + 24px
     $("selConto").hidden = !multiConti();
     $("selOfferto").textContent = tuttiOfferti(lista) ? "Non offerto" : "Offerto";
     $("selConforma").hidden = !lista.some(discrepante);
+    $("selEliminaFoto").hidden = !lista.some(r => r.foto);
     selBar.querySelectorAll("button").forEach(b => { b.disabled = selBusy; });
     // sulla radice (html), così body resta com'è a riposo
     const radice = document.documentElement.style;
@@ -2887,6 +2912,79 @@ body:has(.sel-bar:not([hidden])) { padding-bottom: calc(var(--sel-h, 0px) + 24px
       return store.filter(r => !ids.has(r.id));
     }, (n) => `${speseVerbo(n, "eliminata", "eliminate")}.`);
     if (fatto) foto.forEach(f => cancellaFoto(f));
+  });
+
+  // Conferma dell'eliminazione delle sole foto (selezione e Impostazioni): la finestra di "Elimina" con altri testi.
+  // Ogni chiamante di #selElimDlg reimposta titolo e testi, perché la finestra è la stessa
+  function chiediEliminaFoto(titolo, testo) {
+    $("selElimTitle").textContent = titolo;
+    $("selElimSomma").textContent = testo;
+    $("selElimFoto").hidden = true; $("selElimFoto").textContent = "";
+    return chiedi($("selElimDlg"), "selElimOk", "selElimAnnulla", () => true);
+  }
+  $("selEliminaFoto").addEventListener("click", async () => {
+    const lista = speseScelte(), nFoto = lista.filter(r => r.foto).length;
+    if (!nFoto) return;
+    const testo = lista.length === 1 ? "La spesa resta."
+      : `Delle ${lista.length} spese scelte, ${nFoto} ${nFoto === 1 ? "ha" : "hanno"} la foto. Le spese restano.`;
+    if (!await chiediEliminaFoto(`Eliminare ${fotoN(nFoto)}?`, testo)) return;
+    // prima si salva, poi si cancellano i file (come "Elimina")
+    let file = [];
+    const fatto = await suSelezione((ids) => { const r = speseSenzaFoto(ids); file = r.file; return r.store; },
+      (n) => `${fotoN(file.length)} ${file.length === 1 ? "eliminata" : "eliminate"}. ${n === 1 ? "La spesa resta." : "Le spese restano."}`);
+    if (fatto) file.forEach(f => cancellaFoto(f));
+  });
+
+  // Nota sulle spese scelte: chi non ha nota la riceve, chi ce l'ha la ritrova in coda (con uno spazio) se ci sta.
+  // Risponde con la nota nuova della spesa, oppure null se non ci sta (la spesa resta com'era)
+  function notaInCoda(vecchia, nuova) {
+    if (!vecchia) return nuova;
+    const insieme = vecchia + " " + nuova;
+    return insieme.length <= NOTA_MAX ? insieme : null;
+  }
+  const spazioNota = (r) => r.nota ? Math.max(0, NOTA_MAX - r.nota.length - 1) : NOTA_MAX;
+  const caratteri = (n) => n === 1 ? "1 carattere" : `${n} caratteri`;
+  // Riga sotto il campo: quanto spazio c'è (campo vuoto), oppure in quante spese ci sta la nota scritta
+  function anteprimaNota(lista, nuova) {
+    if (!nuova) {
+      const spazi = lista.map(spazioNota), min = Math.min(...spazi), max = Math.max(...spazi);
+      return ["Spazio libero: " + (min === max ? caratteri(min) : `da ${min} a ${caratteri(max)}`)];
+    }
+    const n = lista.length, k = lista.filter(r => notaInCoda(r.nota, nuova) !== null).length, m = n - k;
+    const avviso = (t) => el("span", "avviso", t);
+    if (!k) return [avviso(n === 1 ? "Non ci sta" : "Non ci sta in nessuna spesa")];
+    if (n === 1) return ["Ci sta"];
+    return [`Ci sta in ${spese(k)} su ${n}`, ...m ? [" · ", avviso(`${m} ${m === 1 ? "resta com'era" : "restano com'erano"}`)] : []];
+  }
+  $("selNota").addEventListener("click", async () => {
+    const lista = speseScelte();
+    if (!lista.length) return;
+    const campo = $("selNotaTesto"), ok = $("selNotaOk");
+    const aggiorna = () => {
+      const nuova = campo.value.trim();
+      contaNota(campo, $("selNotaCnt"));
+      $("selNotaSpazio").replaceChildren(...anteprimaNota(lista, nuova));
+      ok.disabled = !nuova || !lista.some(r => notaInCoda(r.nota, nuova) !== null);
+    };
+    $("selNotaTitle").textContent = `Aggiungi una nota a ${spese(lista.length)}`;
+    campo.value = "";
+    campo.oninput = aggiorna;
+    campo.onkeydown = (e) => { if (e.key === "Enter") { e.preventDefault(); if (!ok.disabled) ok.click(); } };
+    aggiorna();
+    // il cursore va nel campo: "Fatto" parte spento, quindi chiedi() non gli porta via il fuoco
+    const nuova = await chiedi($("selNotaDlg"), "selNotaOk", "selNotaAnnulla", () => campo.value.trim(), () => campo.focus());
+    if (!nuova) return;
+    let saltate = 0;
+    await suSelezione((ids) => {
+      saltate = 0;
+      return store.map(r => {
+        if (!ids.has(r.id)) return r;
+        const nota = notaInCoda(r.nota, nuova);
+        if (nota === null) { saltate++; return r; }
+        return { ...r, nota };
+      });
+    }, (n) => (n === saltate ? "Nessuna nota aggiunta." : `Nota aggiunta a ${spese(n - saltate)}.`)
+      + (saltate ? ` ${saltate} ${saltate === 1 ? "saltata" : "saltate"}: non c'era spazio.` : ""));
   });
 
   // Conforma: le spese scelte di un'altra valuta di base diventano come se fossero state inserite con quella attuale,
@@ -3383,22 +3481,22 @@ body:has(.sel-bar:not([hidden])) { padding-bottom: calc(var(--sel-h, 0px) + 24px
     $("fotoEsporta").disabled = $("fotoEliminaSel").disabled = nessuna;
   }
 
-  // ---- Esporta / elimina foto: prima i conti (se più di uno), poi i mesi ----
+  // ---- Esporta foto: prima i conti (se più di uno), poi i mesi ----
   // L'esportazione crea un unico file .zip (le foto così come sono) e lo apre nella condivisione di Android.
   const gfDlg = $("gfDlg");
   // msg: esito dell'ultima operazione, mostrato sotto la lista finché non cambia la scelta, il passo o si riapre;
   // etichetta: testo del pulsante mentre si lavora (busy)
-  const gf = { modo: "esporta", passo: "conti", conti: new Set(), mesi: new Set(), conferma: false, busy: false, dim: new Map(), msg: "", etichetta: "" };
+  const gf = { passo: "conti", conti: new Set(), mesi: new Set(), busy: false, dim: new Map(), msg: "", etichetta: "" };
   const conFoto = () => store.filter(r => r.foto && r.data);
   const meseDi = (r) => r.data.slice(0, 7);
   const fotoN = (n) => n === 1 ? "1 foto" : `${n} foto`;
   const fotoDeiConti = () => conFoto().filter(r => gf.conti.has(contoOf(r)));
   const fotoScelte = () => fotoDeiConti().filter(r => gf.mesi.has(meseDi(r)));
 
-  async function apriGestioneFoto(modo) {
+  async function apriEsportaFoto() {
     if (gf.busy) return;
     fotoMsg("");
-    gf.modo = modo; gf.conferma = false; gf.msg = "";
+    gf.msg = "";
     gf.dim = ((await spazioFoto()) || {}).dim || new Map();
     const tutte = conFoto();
     if (!tutte.length) { fotoMsg("Non ci sono foto salvate."); return; }
@@ -3406,19 +3504,17 @@ body:has(.sel-bar:not([hidden])) { padding-bottom: calc(var(--sel-h, 0px) + 24px
     gf.mesi = new Set();
     $("gfDopo").checked = false;
     if (multiConti()) gf.passo = "conti"; else vaiAiMesi();
-    $("gfTitle").textContent = modo === "esporta" ? "Esporta foto" : "Elimina foto";
     renderGf();
     gfDlg.showModal();
   }
   function vaiAiMesi() {
-    gf.passo = "mesi"; gf.conferma = false; gf.msg = "";
-    // Esporta: tutti i mesi spuntati; elimina: nessuno, si sceglie cosa cancellare
-    gf.mesi = gf.modo === "esporta" ? new Set(fotoDeiConti().map(meseDi)) : new Set();
+    gf.passo = "mesi"; gf.msg = "";
+    // tutti i mesi spuntati
+    gf.mesi = new Set(fotoDeiConti().map(meseDi));
   }
 
   function renderGf() {
     const ul = $("gfList"), mesi = gf.passo === "mesi", piu = multiConti();
-    const elimina = gf.modo === "elimina";
     $("gfSub").textContent = mesi ? (piu ? "2 · Scegli i mesi" : "Scegli i mesi") : "1 · Scegli i conti";
     const deiConti = fotoDeiConti();
     let voci;
@@ -3432,25 +3528,24 @@ body:has(.sel-bar:not([hidden])) { padding-bottom: calc(var(--sel-h, 0px) + 24px
     const attive = voci.filter(v => v.n);
     const tutteSpuntate = attive.length && attive.every(v => v.set.has(v.id));
     $("gfTutti").textContent = tutteSpuntate ? "Togli tutti" : "Seleziona tutti";
-    $("gfTutti").onclick = () => { attive.forEach(v => tutteSpuntate ? v.set.delete(v.id) : v.set.add(v.id)); gf.conferma = false; gf.msg = ""; renderGf(); };
+    $("gfTutti").onclick = () => { attive.forEach(v => tutteSpuntate ? v.set.delete(v.id) : v.set.add(v.id)); gf.msg = ""; renderGf(); };
     ul.replaceChildren(...voci.map(v => {
       const nome = el("span", "nome", v.nome); nome.style.textTransform = mesi ? "capitalize" : "";
-      return el("li", null, rigaSpunta(v.set, v.id, !v.n || gf.busy, [nome, el("small", null, fotoN(v.n))], () => { gf.conferma = false; gf.msg = ""; renderGf(); }));
+      return el("li", null, rigaSpunta(v.set, v.id, !v.n || gf.busy, [nome, el("small", null, fotoN(v.n))], () => { gf.msg = ""; renderGf(); }));
     }));
-    $("gfDopoBox").hidden = !mesi || elimina;
+    $("gfDopoBox").hidden = !mesi;
     const scelte = mesi ? deiConti.filter(r => gf.mesi.has(meseDi(r))) : deiConti;
     const byte = scelte.reduce((s, r) => s + (gf.dim.get(r.foto) || 0), 0);
     $("gfConta").textContent = scelte.length ? `${fotoN(scelte.length)}${byte ? " · " + mb(byte) : ""}` : "Nessuna foto scelta";
     $("gfIndietro").textContent = mesi && piu ? "Indietro" : "Annulla";
     $("gfIndietro").disabled = gf.busy;
     const ok = $("gfOk");
-    ok.className = elimina && mesi ? "danger-btn" : "primary";
     ok.disabled = gf.busy || !scelte.length;
-    ok.textContent = gf.busy ? gf.etichetta : !mesi ? "Avanti" : !elimina ? `Esporta ${fotoN(scelte.length)}` : gf.conferma ? `Conferma: elimina ${fotoN(scelte.length)}` : `Elimina ${fotoN(scelte.length)}`;
-    $("gfMsg").textContent = gf.msg || (elimina && mesi && gf.conferma ? "Le foto vengono cancellate dal telefono. Le spese restano." : "");
+    ok.textContent = gf.busy ? gf.etichetta : !mesi ? "Avanti" : `Esporta ${fotoN(scelte.length)}`;
+    $("gfMsg").textContent = gf.msg;
   }
   $("gfIndietro").addEventListener("click", () => {
-    if (gf.passo === "mesi" && multiConti()) { gf.passo = "conti"; gf.conferma = false; gf.msg = ""; renderGf(); }
+    if (gf.passo === "mesi" && multiConti()) { gf.passo = "conti"; gf.msg = ""; renderGf(); }
     else gfDlg.close();
   });
   gfDlg.addEventListener("cancel", (e) => { if (gf.busy) e.preventDefault(); });
@@ -3461,16 +3556,7 @@ body:has(.sel-bar:not([hidden])) { padding-bottom: calc(var(--sel-h, 0px) + 24px
     const scelte = fotoScelte();
     if (!scelte.length) return;
     // un nuovo tentativo toglie l'esito di quello prima
-    const lavora = (etichetta) => { gf.busy = true; gf.msg = ""; gf.etichetta = etichetta; renderGf(); };
-    if (gf.modo === "elimina") {
-      if (!gf.conferma) { gf.conferma = true; renderGf(); return; }
-      lavora("Elimino…");
-      try { await togliFoto(scelte); gfDlg.close(); fotoMsg(`Eliminate ${fotoN(scelte.length)}. Le spese restano.`); }
-      catch (e) { gf.msg = "Eliminazione non riuscita. Riprova."; }
-      finally { gf.busy = false; if (gfDlg.open) renderGf(); }
-      return;
-    }
-    lavora($("gfOk").textContent);
+    gf.busy = true; gf.msg = ""; gf.etichetta = $("gfOk").textContent; renderGf();
     const dopo = $("gfDopo").checked;
     try {
       const r = await esportaFoto(scelte, (i, n) => { gf.etichetta = `Preparo ${i}/${n}…`; $("gfOk").textContent = gf.etichetta; });
@@ -3485,19 +3571,29 @@ body:has(.sel-bar:not([hidden])) { padding-bottom: calc(var(--sel-h, 0px) + 24px
       gf.msg = annullata ? "Esportazione annullata" + (dopo ? ": nessuna foto eliminata." : ".") : "Esportazione non riuscita.";
     } finally { gf.busy = false; if (gfDlg.open) renderGf(); }
   });
-  $("fotoEsporta").addEventListener("click", () => apriGestioneFoto("esporta"));
-  $("fotoEliminaSel").addEventListener("click", () => apriGestioneFoto("elimina"));
+  $("fotoEsporta").addEventListener("click", apriEsportaFoto);
 
-  // Toglie le foto dalle spese (un solo salvataggio), poi cancella i file
+  // ---- Elimina tutte le foto (Impostazioni): stessa conferma di "Elimina foto" della selezione; le spese restano ----
+  const fotoDiScontrini = (n) => n === 1 ? "1 foto di scontrino" : `${n} foto di scontrini`;
+  $("fotoEliminaSel").addEventListener("click", async () => {
+    // le stesse spese che accendono il pulsante (aggiornaSpazioFoto)
+    const tutte = store.filter(r => r.foto), n = tutte.length;
+    if (!n) return;
+    fotoMsg("");
+    if (!await chiediEliminaFoto("Eliminare tutte le foto?", `${fotoDiScontrini(n)}. ${n === 1 ? "La spesa resta." : "Le spese restano."}`)) return;
+    $("fotoEliminaSel").disabled = true;
+    try { fotoMsg(`Eliminate ${fotoN(await togliFoto(tutte))}. Le spese restano.`); }
+    catch (e) { fotoMsg("Eliminazione non riuscita. Riprova.", true); }
+    finally { aggiornaSpazioFoto(); }
+  });
+
+  // Toglie le foto dalle spese (un solo salvataggio), poi cancella i file. Risponde con quante foto ha tolto
   async function togliFoto(lista) {
     const ids = new Set(lista.map(r => r.id));
-    let file = [];
-    await modifica(() => {
-      file = [];
-      return { store: store.map(r => { if (!ids.has(r.id) || !r.foto) return r; file.push(r.foto); const { foto, ...resto } = r; return resto; }) };
-    });
+    const { file } = await modifica(() => speseSenzaFoto(ids));
     render();
     for (const f of file) await cancellaFoto(f);
+    return file.length;
   }
 
   // ---- Archivio .zip senza compressione (le foto JPEG sono già compresse), scritto a pezzi ----
