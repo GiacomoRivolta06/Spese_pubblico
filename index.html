@@ -269,6 +269,11 @@ input:focus, select:focus { outline: none; border-color: var(--accent); box-shad
 .scan-gal { flex: 0 0 20%; width: auto; justify-content: center; padding: 14px 0; }
 .scan-split #scanBtn { flex: 1; width: auto; min-width: 0; }
 .scan-split .scan-gal { border-left: 1px solid var(--accent-ink); border-left: 1px solid color-mix(in srgb, var(--accent-ink) 40%, transparent); }
+/* Galleria tenuta premuta: si riempie da sinistra in 3 s (FILE_MS nello script), poi il selettore file */
+.scan-gal { -webkit-touch-callout: none; -webkit-user-select: none; user-select: none; }
+.scan-gal.riempie { background-image: linear-gradient(rgba(255,255,255,.35), rgba(255,255,255,.35)); background-image: linear-gradient(color-mix(in srgb, var(--accent-ink) 35%, transparent), color-mix(in srgb, var(--accent-ink) 35%, transparent));
+  background-repeat: no-repeat; background-size: 0 100%; animation: riempi 3s linear forwards; }
+@keyframes riempi { to { background-size: 100% 100%; } }
 .scan-btn.alt { background: var(--paper); color: var(--ink); border: 1px solid var(--line); }
 .scan-btn.alt svg { color: var(--accent); }
 .scan-btn.alt small { color: var(--muted); opacity: 1; }
@@ -2677,6 +2682,10 @@ body:has(.sel-bar:not([hidden])) { padding-bottom: calc(var(--sel-h, 0px) + 24px
   async function prendiCondivisi() {
     let r = null;
     try { r = await COND.ricevuti(); } catch (e) { return; }
+    accodaGruppo(r);
+  }
+  // Una risposta del plugin ({ file: [{ id, nome, tipo }] }, da ricevuti o da scegli) diventa un gruppo in coda
+  function accodaGruppo(r) {
     const file = r && Array.isArray(r.file) ? r.file : [];
     if (!file.length) return;
     gruppiCondivisi.push(file);
@@ -2737,7 +2746,7 @@ body:has(.sel-bar:not([hidden])) { padding-bottom: calc(var(--sel-h, 0px) + 24px
   function erroreCondiviso(e) {
     const code = e && e.code;
     if (code === "NON_SUPPORTATO") scanStatus("Questo tipo di file non si può leggere: condividi una foto o un PDF.", { err: true });
-    else if (code === "ILLEGGIBILE") scanStatus("Non riesco ad aprire il file.", { err: true });
+    else if (code === "ILLEGGIBILE" || code === "SCELTA") scanStatus("Non riesco ad aprire il file.", { err: true });
     else erroreLettura(e);
   }
   function riassuntoCondivisi(n, { aggiunte, saltati, illeggibili, troncati }) {
@@ -2816,14 +2825,19 @@ body:has(.sel-bar:not([hidden])) { padding-bottom: calc(var(--sel-h, 0px) + 24px
   // la barra può cambiare altezza girando il telefono: il margine in fondo la segue
   window.addEventListener("resize", () => { if (!selBar.hidden) aggiornaBarraSel(); });
 
+  // Una pressione lunga alla volta (elenco o galleria): spostarsi, alzare il dito o scorrere la annullano;
+  // fine() si chiama sempre, scattata o annullata
   let pressione = null, ignoraClick = false;
-  function annullaPressione() { if (pressione) clearTimeout(pressione.timer); pressione = null; }
+  function annullaPressione() { if (pressione) { clearTimeout(pressione.timer); pressione.fine(); } pressione = null; }
+  function premi(e, ms, azione, fine = () => {}) {
+    pressione = { x: e.clientX, y: e.clientY, fine, timer: setTimeout(() => { pressione = null; fine(); ignoraClick = true; azione(); }, ms) };
+  }
   // ogni nuovo tocco, ovunque, chiude il conto con quello prima
   window.addEventListener("pointerdown", () => { ignoraClick = false; annullaPressione(); }, true);
   $("list").addEventListener("pointerdown", (e) => {
     const id = idRigaSotto(e.target);
     if (!id || selBusy || !e.isPrimary || e.button !== 0) return;
-    pressione = { x: e.clientX, y: e.clientY, timer: setTimeout(() => { pressione = null; ignoraClick = true; cambiaScelta(id); }, PRESSIONE_MS) };
+    premi(e, PRESSIONE_MS, () => cambiaScelta(id));
   });
   window.addEventListener("pointermove", (e) => { if (pressione && Math.hypot(e.clientX - pressione.x, e.clientY - pressione.y) > SPOSTAMENTO_PX) annullaPressione(); });
   ["pointerup", "pointercancel", "scroll"].forEach(t => window.addEventListener(t, annullaPressione, { passive: true }));
@@ -2835,6 +2849,39 @@ body:has(.sel-bar:not([hidden])) { padding-bottom: calc(var(--sel-h, 0px) + 24px
     if (ignoraClick) ignoraClick = false; else cambiaScelta(id);
   }, true);
   $("list").addEventListener("contextmenu", (e) => { if (idRigaSotto(e.target)) e.preventDefault(); });
+
+  // ---- Galleria tenuta premuta 3 s: il selettore file di Android (qualunque tipo, più file) ----
+  // L'icona si riempie da sinistra (.riempie, durata nel CSS), poi i file scelti fanno il percorso della condivisione.
+  // Rilasciata prima, il tocco resta quello di sempre (galleria). Solo nell'app installata e a lavori fermi
+  const FILE_MS = 3000;
+  const galleriaBtn = $("galleriaBtn");
+  if (COND) {
+    galleriaBtn.addEventListener("pointerdown", (e) => {
+      if (occupato() || !e.isPrimary || e.button !== 0) return;
+      galleriaBtn.classList.add("riempie");
+      premi(e, FILE_MS, scegliFile, () => galleriaBtn.classList.remove("riempie"));
+    });
+    // fase di cattura: arriva prima del tocco che apre la galleria
+    galleriaBtn.addEventListener("click", (e) => {
+      if (!ignoraClick) return;
+      ignoraClick = false;
+      e.stopImmediatePropagation(); e.preventDefault();
+    }, true);
+    galleriaBtn.addEventListener("contextmenu", (e) => e.preventDefault());
+  }
+  // Annullato: lista vuota, non succede nulla. Si apre la galleria, come per un tocco, se manca il selettore:
+  // APK di prima di scegli (l'interfaccia si aggiorna anche sugli APK vecchi: Capacitor espone solo i metodi
+  // che l'APK ha, e un plugin creato con registerPlugin rifiuta con UNIMPLEMENTED) o nessuna app selettore
+  // (NO_SELETTORE). Gli altri errori (SCELTA) si dicono, come per la condivisione
+  const senzaSelettore = (e) => e && (e.code === "UNIMPLEMENTED" || e.code === "NO_SELETTORE");
+  async function scegliFile() {
+    if (occupato()) return;
+    if (typeof COND.scegli !== "function") { scanReceipt("PHOTOS"); return; }
+    let r;
+    try { r = await COND.scegli(); }
+    catch (e) { if (senzaSelettore(e)) scanReceipt("PHOTOS"); else erroreCondiviso(e); return; }
+    accodaGruppo(r);
+  }
   // Esc esce dalla selezione (con una ricerca scritta, il primo Esc svuota la ricerca; con una finestra aperta, chiude quella)
   document.addEventListener("keydown", (e) => {
     if (e.key !== "Escape" || !selezione.size || finestraAperta()) return;
