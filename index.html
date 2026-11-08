@@ -269,10 +269,10 @@ input:focus, select:focus { outline: none; border-color: var(--accent); box-shad
 .scan-gal { flex: 0 0 20%; width: auto; justify-content: center; padding: 14px 0; }
 .scan-split #scanBtn { flex: 1; width: auto; min-width: 0; }
 .scan-split .scan-gal { border-left: 1px solid var(--accent-ink); border-left: 1px solid color-mix(in srgb, var(--accent-ink) 40%, transparent); }
-/* Galleria tenuta premuta: si riempie da sinistra in 3 s (FILE_MS nello script), poi il selettore file */
-.scan-gal { -webkit-touch-callout: none; -webkit-user-select: none; user-select: none; }
+/* Galleria tenuta premuta: si riempie da sinistra in --file-ms (in ms: lo legge anche lo script, FILE_MS), poi il selettore file */
+.scan-gal { --file-ms: 1000ms; -webkit-touch-callout: none; -webkit-user-select: none; user-select: none; }
 .scan-gal.riempie { background-image: linear-gradient(rgba(255,255,255,.35), rgba(255,255,255,.35)); background-image: linear-gradient(color-mix(in srgb, var(--accent-ink) 35%, transparent), color-mix(in srgb, var(--accent-ink) 35%, transparent));
-  background-repeat: no-repeat; background-size: 0 100%; animation: riempi 3s linear forwards; }
+  background-repeat: no-repeat; background-size: 0 100%; animation: riempi var(--file-ms) linear forwards; }
 @keyframes riempi { to { background-size: 100% 100%; } }
 .scan-btn.alt { background: var(--paper); color: var(--ink); border: 1px solid var(--line); }
 .scan-btn.alt svg { color: var(--accent); }
@@ -378,8 +378,11 @@ dialog.dlg::backdrop { background: rgba(10, 20, 25, .45); }
 .foto-box { display: flex; align-items: center; gap: 12px; padding: 11px 12px; border: 1px solid var(--line); border-radius: 10px; background: var(--bg); cursor: pointer; user-select: none; }
 .foto-box span { font-weight: 600; }
 .foto-box:has(input:checked) { border-color: var(--accent); background: var(--accent-soft); }
-.foto-box.offerta input { accent-color: var(--gift); }
-.foto-box.offerta:has(input:checked) { border-color: var(--gift); background: var(--gift-soft); }
+/* "Spesa offerta": più piccola e discreta della casella della foto, che resta la principale */
+.foto-box.offerta { gap: 10px; padding: 7px 12px; background: none; color: var(--muted); font-size: .85rem; }
+.foto-box.offerta span { font-weight: 500; }
+.foto-box.offerta input { width: 16px; height: 16px; accent-color: var(--gift); }
+.foto-box.offerta:has(input:checked) { border-color: var(--gift); color: var(--gift); background: none; background: color-mix(in srgb, var(--gift-soft) 45%, transparent); }
 /* Preferenza "salva la foto" di ogni conto (nuovo conto e matita) */
 .spunta { display: flex; align-items: center; gap: 10px; font-size: .9rem; cursor: pointer; user-select: none; }
 .conti-list .conto-edit .spunta { padding: 0; gap: 10px; }
@@ -2860,16 +2863,33 @@ body:has(.sel-bar:not([hidden])) { padding-bottom: calc(var(--sel-h, 0px) + 24px
   }, true);
   $("list").addEventListener("contextmenu", (e) => { if (idRigaSotto(e.target)) e.preventDefault(); });
 
-  // ---- Galleria tenuta premuta 3 s: il selettore file di Android (qualunque tipo, più file) ----
-  // L'icona si riempie da sinistra (.riempie, durata nel CSS), poi i file scelti fanno il percorso della condivisione.
+  // ---- Galleria tenuta premuta 1 s: il selettore file di Android (qualunque tipo, più file) ----
+  // L'icona si riempie da sinistra (.riempie), poi i file scelti fanno il percorso della condivisione.
   // Rilasciata prima, il tocco resta quello di sempre (galleria). Solo nell'app installata e a lavori fermi
-  const FILE_MS = 3000;
   const galleriaBtn = $("galleriaBtn");
+  const FILE_MS = parseFloat(getComputedStyle(galleriaBtn).getPropertyValue("--file-ms")); // nel CSS, come l'animazione
   if (COND) {
+    const smettiDiRiempire = () => galleriaBtn.classList.remove("riempie");
+    const inPressione = () => !!pressione && pressione.fine === smettiDiRiempire;
+    let toccoTenuto = false; // touchstart annullato: il click di Android non arriva, il tocco breve lo fa pointerup
     galleriaBtn.addEventListener("pointerdown", (e) => {
+      toccoTenuto = false;
       if (occupato() || !e.isPrimary || e.button !== 0) return;
       galleriaBtn.classList.add("riempie");
-      premi(e, FILE_MS, scegliFile, () => galleriaBtn.classList.remove("riempie"));
+      premi(e, FILE_MS, scegliFile, smettiDiRiempire);
+    });
+    // Annullare touchstart toglie alla WebView il riconoscimento della pressione lunga (~0,5 s), e con esso la
+    // vibrazione e il menu di sistema; toglie però anche il click del tocco breve, che si rifà al rilascio
+    galleriaBtn.addEventListener("touchstart", (e) => {
+      if (!inPressione()) return;
+      e.preventDefault();
+      toccoTenuto = true;
+    }, { passive: false });
+    galleriaBtn.addEventListener("pointerup", () => {
+      if (!toccoTenuto || !inPressione()) return;
+      toccoTenuto = false;
+      annullaPressione();
+      galleriaBtn.click();
     });
     // fase di cattura: arriva prima del tocco che apre la galleria
     galleriaBtn.addEventListener("click", (e) => {
