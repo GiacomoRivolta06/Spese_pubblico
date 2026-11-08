@@ -378,6 +378,8 @@ dialog.dlg::backdrop { background: rgba(10, 20, 25, .45); }
 .foto-box { display: flex; align-items: center; gap: 12px; padding: 11px 12px; border: 1px solid var(--line); border-radius: 10px; background: var(--bg); cursor: pointer; user-select: none; }
 .foto-box span { font-weight: 600; }
 .foto-box:has(input:checked) { border-color: var(--accent); background: var(--accent-soft); }
+.foto-box.offerta input { accent-color: var(--gift); }
+.foto-box.offerta:has(input:checked) { border-color: var(--gift); background: var(--gift-soft); }
 /* Preferenza "salva la foto" di ogni conto (nuovo conto e matita) */
 .spunta { display: flex; align-items: center; gap: 10px; font-size: .9rem; cursor: pointer; user-select: none; }
 .conti-list .conto-edit .spunta { padding: 0; gap: 10px; }
@@ -728,6 +730,10 @@ body:has(.sel-bar:not([hidden])) { padding-bottom: calc(var(--sel-h, 0px) + 24px
     <label class="foto-box" for="scanFoto">
       <input type="checkbox" id="scanFoto">
       <span>Salva la foto dello scontrino</span>
+    </label>
+    <label class="foto-box offerta" for="scanOfferto">
+      <input type="checkbox" id="scanOfferto">
+      <span>Spesa offerta</span>
     </label>
     <div class="dlg-actions"><button type="button" class="ghost" id="scanDlgAnnulla">Annulla</button><button type="button" class="primary" id="scanFatto">Fatto</button></div>
   </div>
@@ -2131,18 +2137,20 @@ body:has(.sel-bar:not([hidden])) { padding-bottom: calc(var(--sel-h, 0px) + 24px
     };
   }
   function chiediConto() {
-    const box = $("scanConti"), casella = $("scanFoto");
+    const box = $("scanConti"), casellaFoto = $("scanFoto");
     let toccata = false;
     const piu = multiConti();
     const fotoDelConto = (id) => !!(conti.find(c => c.id === id) || {}).foto;
-    casella.onchange = () => { toccata = true; };
-    box.onchange = (e) => { if (!toccata && e.target.name === "scanConto") casella.checked = fotoDelConto(e.target.value); };
+    casellaFoto.onchange = () => { toccata = true; };
+    box.onchange = (e) => { if (!toccata && e.target.name === "scanConto") casellaFoto.checked = fotoDelConto(e.target.value); };
     $("scanDlgTitle").hidden = box.hidden = !piu;
     // il conto proposto esiste sempre (con un solo conto è proprio quello)
     const pred = contoPredefinito();
     const misura = sceltaConti(box, $("scanContiNota"), "scanConto", pred);
-    casella.checked = fotoDelConto(pred);
-    const risposta = () => ({ conto: piu ? box.querySelector("input:checked").value : baseId(), foto: casella.checked });
+    casellaFoto.checked = fotoDelConto(pred);
+    const offerto = $("scanOfferto");
+    offerto.checked = false; // ogni volta da capo: non si ricorda e non dipende dal conto
+    const risposta = () => ({ conto: piu ? box.querySelector("input:checked").value : baseId(), foto: casellaFoto.checked, offerto: offerto.checked });
     return chiedi($("scanDlg"), "scanFatto", "scanDlgAnnulla", risposta, misura);
   }
 
@@ -2613,7 +2621,7 @@ body:has(.sel-bar:not([hidden])) { padding-bottom: calc(var(--sel-h, 0px) + 24px
   // nota: frase in coda all'esito. Risponde "aggiunta" o "modulo"; un errore del lettore arriva a chi chiama
   async function leggiScontrino(base64, formato, scelta, nota = "") {
     const pagine = [].concat(base64);
-    const { conto, foto: vuoleFoto } = scelta;
+    const { conto, foto: vuoleFoto, offerto } = scelta;
     scanStatus("Leggo lo scontrino", { busy: true });
     const testi = [];
     for (const pag of pagine) testi.push(linesFromOcr(await OCR.detectText({ base64Image: pag, rotation: 0 })));
@@ -2625,6 +2633,7 @@ body:has(.sel-bar:not([hidden])) { padding-bottom: calc(var(--sel-h, 0px) + 24px
       prezzoCent: p.prezzoCent && arrotonda(p.prezzoCent, valutaBase),
       data: p.data || today(),
       conto,
+      offerto,
     };
     // Foto da conservare: rimpicciolita, per non riempire il telefono
     let fotoB64 = null;
@@ -2638,7 +2647,7 @@ body:has(.sel-bar:not([hidden])) { padding-bottom: calc(var(--sel-h, 0px) + 24px
       return "modulo";
     }
     const foto = fotoB64 ? await salvaFoto(fotoB64) : null;
-    const full = { ...voce, offerto: false, creato: Date.now(), daScontrino: true, ...foto ? { foto } : {}, ...valutaBase !== "EUR" ? { valutaBase } : {} };
+    const full = { ...voce, creato: Date.now(), daScontrino: true, ...foto ? { foto } : {}, ...valutaBase !== "EUR" ? { valutaBase } : {} };
     const ref = await col.add(full);
     lsSet("spese.ultimoConto", conto);
     freshId = ref.id;
@@ -2774,6 +2783,7 @@ body:has(.sel-bar:not([hidden])) { padding-bottom: calc(var(--sel-h, 0px) + 24px
     if (v.prezzoCent) $("f-prezzo").value = centsToCampo(v.prezzoCent, valutaBase);
     if (v.data) impostaData(v.data);
     if (v.conto) impostaConto(v.conto);
+    $("f-off").checked = !!v.offerto;
     apriSpesa();
   }
 
