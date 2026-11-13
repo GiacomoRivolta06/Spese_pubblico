@@ -408,6 +408,7 @@ dialog.dlg-imp { width: min(460px, calc(100% - 24px)); }
 .interruttore input:checked::before { transform: translateX(18px); }
 @media (prefers-reduced-motion: reduce) { .interruttore input, .interruttore input::before { transition: none; } }
 .imp-sez .link { align-self: flex-start; font-size: .82rem; }
+#rigaOfferte { margin-top: 8px; }
 
 /* Foto dello scontrino */
 .chip.foto { display: inline-flex; align-items: center; gap: 4px; background: var(--bg); color: var(--ink); border: 1px solid var(--line); }
@@ -481,13 +482,14 @@ body:has(.sel-bar:not([hidden])) { padding-bottom: calc(var(--sel-h, 0px) + 24px
     <div class="total" id="total">€ 0,00</div>
     <div class="meta">
       <span><b id="count">0</b> voci</span>
-      <span class="g">offerto <b id="giftTotal" class="num">€ 0,00</b></span>
+      <span class="g" id="giftRiga">offerto <b id="giftTotal" class="num">€ 0,00</b></span>
     </div>
     <div class="chart" id="chart" hidden>
       <div class="legend" id="legend" hidden><span><i class="sw"></i>Spese</span><span><i class="sw g"></i>Offerto</span></div>
       <div class="cols" id="cols"></div>
     </div>
     <div class="bars" id="bars" hidden></div>
+    <label class="interruttore" id="rigaOfferte" hidden><span>Mostra le offerte</span><input type="checkbox" role="switch" id="mostraOfferte"></label>
   </section>
 
   <section class="scan" id="scan">
@@ -1234,6 +1236,17 @@ body:has(.sel-bar:not([hidden])) { padding-bottom: calc(var(--sel-h, 0px) + 24px
   }
   function showAll() { hidden.clear(); saveHidden(); render(); }
 
+  // Spese offerte mostrate o nascoste (si ricorda anche chiudendo l'app; vale per tutti i conti e periodi).
+  // "0" = nascoste; senza la chiave si vedono
+  let mostraOfferte = lsGet("spese.offerte") !== "0";
+  const passaFiltroOfferte = (r) => mostraOfferte || !r.offerto;
+  function scegliOfferte(on) {
+    mostraOfferte = on;
+    lsSet("spese.offerte", on ? null : "0");
+    render();
+  }
+  $("mostraOfferte").addEventListener("change", (e) => scegliOfferte(e.target.checked));
+
   // Ricerca testuale (ignora maiuscole e accenti), su tutte le date
   const norm = (s) => String(s || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
   // si trova anche per importo e codice della valuta estera, e per la valuta di una spesa di un'altra valuta di base
@@ -1241,6 +1254,8 @@ body:has(.sel-bar:not([hidden])) { padding-bottom: calc(var(--sel-h, 0px) + 24px
     ...estera(r) ? [centsToInput(r.importoOrig), r.valuta] : [], ...discrepante(r) ? [baseDi(r)] : []].join(" ")).includes(q);
   // La spesa è tra quelle mostrate: con una ricerca (q) su tutte le date, altrimenti nel periodo P
   const nelFiltro = (r, P, q) => !!r.data && (q ? matches(r, q) : r.data >= P.start && r.data <= P.end);
+  // Come nelFiltro, senza le offerte nascoste dall'interruttore «Mostra le offerte»
+  const daMostrare = (r, P, q) => nelFiltro(r, P, q) && passaFiltroOfferte(r);
   // Ordine dell'elenco: dalla più recente; nello stesso giorno, dall'ultima inserita
   const piuRecenti = (a, b) => (b.data || "").localeCompare(a.data || "") || (b.creato || 0) - (a.creato || 0);
   const piuVecchie = (a, b) => piuRecenti(b, a);
@@ -1335,7 +1350,9 @@ body:has(.sel-bar:not([hidden])) { padding-bottom: calc(var(--sel-h, 0px) + 24px
     $("prev").disabled = $("next").disabled = $("monthLabel").disabled = searching;
     document.querySelectorAll(".seg button").forEach(b => b.setAttribute("aria-pressed", String(!custom && b.dataset.view === view)));
     aggiornaConti();
-    const all = rows.filter(r => visibili.has(contoOf(r)) && nelFiltro(r, P, q)).sort(piuRecenti);
+    const all = rows.filter(r => visibili.has(contoOf(r)) && daMostrare(r, P, q)).sort(piuRecenti);
+    // offerte nel periodo (o nella ricerca) dei conti mostrati, anche se nascoste: decidono se c'è l'interruttore
+    const ciSonoOfferte = rows.some(r => r.offerto && visibili.has(contoOf(r)) && nelFiltro(r, P, q));
     const inMonth = all.filter(r => !hidden.has(tipoKey(r)));
     // restano selezionate solo le spese ancora nell'elenco; se non ne resta nessuna si esce dalla selezione
     idsMostrati = inMonth.map(r => r.id);
@@ -1351,6 +1368,7 @@ body:has(.sel-bar:not([hidden])) { padding-bottom: calc(var(--sel-h, 0px) + 24px
     $("total").textContent = testoSomma(tot, av, nv);
     $("count").textContent = inMonth.length;
     $("giftTotal").textContent = testoSomma(gift, ag, ng);
+    $("giftRiga").hidden = !mostraOfferte;
 
     // colonne: giorni della settimana, settimane del mese o mesi dell'anno.
     // Ogni colonna somma le spese normali (azzurro) e quelle offerte (arancio, sopra).
@@ -1411,6 +1429,8 @@ body:has(.sel-bar:not([hidden])) { padding-bottom: calc(var(--sel-h, 0px) + 24px
         el("span", "v", testoSomma(v, av, nv), g || ng ? el("small", null, "+ " + testoSomma(g, ag, ng) + " offerto") : null),
       ], () => toggleTipo(t)));
     });
+    $("rigaOfferte").hidden = !ciSonoOfferte;
+    $("mostraOfferte").checked = mostraOfferte;
 
     // elenco per giorno
     const list = $("list");
@@ -1420,6 +1440,7 @@ body:has(.sel-bar:not([hidden])) { padding-bottom: calc(var(--sel-h, 0px) + 24px
       // col resta null finché l'archivio non è stato letto
       if (!col) list.append(vuoto("Caricamento…", "Le tue spese compariranno qui."));
       else if (all.length) list.append(vuoto("Tutte le categorie sono nascoste", btn("link", "Mostra tutte", showAll)));
+      else if (ciSonoOfferte) list.append(vuoto("Spese offerte nascoste", "Accendi «Mostra le offerte» qui sopra."));
       else if (searching) list.append(vuoto(`Nessun risultato per "${$("q").value.trim()}"`, "Prova con un'altra parola."));
       else list.append(vuoto(`Nessuna spesa ${P.empty}`, "Aggiungi una voce con il modulo qui sopra."));
     } else {
@@ -3228,10 +3249,11 @@ body:has(.sel-bar:not([hidden])) { padding-bottom: calc(var(--sel-h, 0px) + 24px
     const uno = scelti.size === 1 && multiConti() ? slug(nomeConto([...scelti][0])) : "";
     return `spese-${uno ? uno + "-" : ""}${coda}.xlsx`;
   };
-  // Spese del periodo (o della ricerca) mostrato, con le categorie nascoste escluse, di tutti i conti
+  // Spese del periodo (o della ricerca) mostrato, con le categorie e le offerte nascoste escluse, di tutti i conti
   function righeDelPeriodo() {
     const P = period(), q = norm($("q").value.trim());
-    return rows.filter(r => !hidden.has(tipoKey(r)) && nelFiltro(r, P, q));
+    // tutti i conti, non solo quelli visibili: quali esportare si sceglie poi nella finestra dei conti
+    return rows.filter(r => !hidden.has(tipoKey(r)) && daMostrare(r, P, q));
   }
 
   $("export").addEventListener("click", async () => {
