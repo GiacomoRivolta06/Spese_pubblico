@@ -2326,19 +2326,23 @@ body:has(.sel-bar:not([hidden])) { padding-bottom: calc(var(--sel-h, 0px) + 24px
     $("scanSplit").classList.toggle("busy", busy);
   }
 
+  // ---- Importi letti dal testo (scontrini e liste di movimenti): "1.234,56", "12,30", "3.50" ----
+  const AMT = /(\d{1,4}(?:[.'\s]\d{3})*\s?[,.]\s?\d{2})(?!\d)/g;
+  const toCents = (s) => {
+    s = s.replace(/\s/g, "");
+    const m = s.match(/^(.*)[,.](\d{2})$/);
+    if (!m) return NaN;
+    const intPart = m[1].replace(/[.']/g, "");
+    return Number(intPart) * 100 + Number(m[2]);
+  };
+  // Righe che non sono il totale (né un movimento di una lista): subtotali, IVA, sconti, buoni, resto...
+  const EXCL = /SUB\s?TOT|IVA|IMPON|SCONT|RESTO|CONTANT|DI CUI|NON RISCOSS|RISPARM|PUNTI|BUONO|ARROTOND/i;
+  const righeDi = (text) => String(text || "").split(/\r?\n/).map(l => l.replace(/\s+/g, " ").trim()).filter(Boolean);
+
   // ---- Interpretazione del testo di uno scontrino italiano ----
   function parseReceipt(text, todayStr) {
-    const lines = String(text || "").split(/\r?\n/).map(l => l.replace(/\s+/g, " ").trim()).filter(Boolean);
-    const AMT = /(\d{1,4}(?:[.'\s]\d{3})*\s?[,.]\s?\d{2})(?!\d)/g;
-    const toCents = (s) => {
-      s = s.replace(/\s/g, "");
-      const m = s.match(/^(.*)[,.](\d{2})$/);
-      if (!m) return NaN;
-      const intPart = m[1].replace(/[.']/g, "");
-      return Number(intPart) * 100 + Number(m[2]);
-    };
+    const lines = righeDi(text);
     const amountsIn = (l) => [...l.matchAll(AMT)].map(m => toCents(m[1])).filter(v => Number.isFinite(v) && v > 0 && v < 1000000);
-    const EXCL = /SUB\s?TOT|IVA|IMPON|SCONT|RESTO|CONTANT|DI CUI|NON RISCOSS|RISPARM|PUNTI|BUONO|ARROTOND/i;
 
     // Totale: righe "TOTALE ..." con un importo sulla stessa riga o sulla successiva
     let prezzoCent = null, sicuro = false;
@@ -2383,6 +2387,66 @@ body:has(.sel-bar:not([hidden])) { padding-bottom: calc(var(--sel-h, 0px) + 24px
     if (esercente === esercente.toUpperCase()) esercente = esercente.toLowerCase().replace(/(^|[\s'&-])([a-zà-ÿ])/g, (m, a, b) => a + b.toUpperCase());
 
     return { prezzoCent, sicuro, data, esercente: esercente.slice(0, 60) };
+  }
+
+  // ---- Lista di movimenti (schermata dell'app della banca): giorni in lettere e importi con il segno ----
+  const MESI_LISTA = ["gen", "feb", "mar", "apr", "mag", "giu", "lug", "ago", "set", "ott", "nov", "dic"];
+  const GIORNO_LISTA = /^(?:[a-zà-ÿ]+,?\s)?(\d{1,2})\s(gen|feb|mar|apr|mag|giu|lug|ago|set|ott|nov|dic)[a-z]*\.?(?:\s(\d{4}))?$/i;
+  const IMPORTO_SEGNO = new RegExp("(?<!\\d)([-+\\u2013\\u2212])\\s?" + AMT.source);
+  // Intestazione di giorno ("20 Novembre 2026", "sab 20 nov", "Oggi", "Ieri") → AAAA-MM-GG, altrimenti null.
+  // Senza anno: l'anno corrente, o quello prima se il giorno sarebbe nel futuro
+  function giornoIntestazione(l, todayStr) {
+    const rel = /^(oggi|ieri)$/i.exec(l);
+    if (rel) return rel[1].toLowerCase() === "oggi" ? todayStr : iso(piuGiorni(parseDate(todayStr), -1));
+    const m = GIORNO_LISTA.exec(l);
+    if (!m) return null;
+    const giorno = +m[1], mese = MESI_LISTA.indexOf(m[2].toLowerCase());
+    let anno = m[3] ? +m[3] : +todayStr.slice(0, 4);
+    if (!m[3] && iso(new Date(anno, mese, giorno)) > todayStr) anno--;
+    const d = new Date(anno, mese, giorno);
+    return d.getDate() === giorno ? iso(d) : null;
+  }
+  // Esercente: il testo prima dell'importo senza icone, simboli, puntini e la lettera sola di un'icona ("M Mcdonald's")
+  const esercenteMovimento = (s) => s.replace(/[^\wÀ-ÿ'&.\s-]/g, " ").replace(/\.{2,}/g, " ").replace(/\s+/g, " ").trim()
+    .replace(/^(?:\S\s)+/, "").replace(/[\s.-]+$/, "").slice(0, 60);
+  // Riga "Pagamento 22:23 ✓": stato e ora del movimento, non il suo esercente
+  const RIGA_ORA = /^pagament|\b\d{1,2}:\d{2}\b/i;
+  // Che cosa c'è su ogni riga: { giorno } (AAAA-MM-GG), un movimento { cent, entrata, prima: testo prima dell'importo,
+  // sconto: riga di sconti, buoni... }, { senzaSegno } (un importo senza segno), oppure { testo } ("" per "Pagamento 22:23 ✓")
+  function righeMovimenti(text, todayStr) {
+    return righeDi(text).map(l => {
+      const giorno = giornoIntestazione(l, todayStr);
+      if (giorno) return { giorno };
+      const m = IMPORTO_SEGNO.exec(l), cent = m ? toCents(m[2]) : NaN;
+      if (cent > 0 && cent < 1000000) return { cent, entrata: m[1] === "+", prima: l.slice(0, m.index), sconto: EXCL.test(l) };
+      if (l.match(AMT)) return { senzaSegno: true };
+      return { testo: RIGA_ORA.test(l) ? "" : l };
+    });
+  }
+  // È una lista se ci sono almeno un'intestazione di giorno e almeno 2 righe con un importo con il segno, più di quelle
+  // con un importo senza segno; le righe di sconti, buoni... non contano: uno scontrino resta uno scontrino
+  function eListaMovimenti(righe) {
+    const conSegno = righe.filter(r => r.cent && !r.sconto).length;
+    return righe.some(r => r.giorno) && conSegno >= 2 && conSegno > righe.filter(r => r.senzaSegno).length;
+  }
+  // Se è una lista risponde { uscite: [{ data, esercente, prezzoCent }], entrate: quante righe con "+", senzaNome: uscite
+  // senza esercente }, altrimenti null. Ogni uscita prende il giorno dell'ultima intestazione sopra (quelle prima della
+  // prima intestazione si saltano) e, se l'importo è da solo sulla riga, l'esercente della riga appena sopra
+  // (se non è un giorno, un importo o un'ora).
+  function parseMovimenti(text, todayStr) {
+    const righe = righeMovimenti(text, todayStr);
+    if (!eListaMovimenti(righe)) return null;
+    let data = null, entrate = 0, senzaNome = 0;
+    const uscite = [];
+    righe.forEach((r, i) => {
+      if (r.giorno) data = r.giorno;
+      if (!r.cent) return;
+      if (r.entrata) { entrate++; return; }
+      if (!data) return;
+      const esercente = esercenteMovimento(r.prima) || esercenteMovimento((righe[i - 1] || {}).testo || "");
+      if (esercente) uscite.push({ data, esercente, prezzoCent: r.cent }); else senzaNome++;
+    });
+    return { uscite, entrate, senzaNome };
   }
 
   function guessTipologia(esercente, text, rows) {
@@ -2642,7 +2706,8 @@ body:has(.sel-bar:not([hidden])) { padding-bottom: calc(var(--sel-h, 0px) + 24px
 
   // Legge lo scontrino (una foto, oppure le pagine di un PDF in ordine: il testo si unisce in un'unica lettura)
   // e aggiunge la spesa; se l'ha letto a metà apre il modulo precompilato. Come foto si conserva la prima pagina.
-  // nota: frase in coda all'esito. Risponde "aggiunta" o "modulo"; un errore del lettore arriva a chi chiama
+  // nota: frase in coda all'esito. Risponde "aggiunta" o "modulo" (una lista di movimenti: quante spese ha aggiunto);
+  // un errore del lettore arriva a chi chiama
   async function leggiScontrino(base64, formato, scelta, nota = "") {
     const pagine = [].concat(base64);
     const { conto, foto: vuoleFoto, offerto } = scelta;
@@ -2650,6 +2715,8 @@ body:has(.sel-bar:not([hidden])) { padding-bottom: calc(var(--sel-h, 0px) + 24px
     const testi = [];
     for (const pag of pagine) testi.push(linesFromOcr(await OCR.detectText({ base64Image: pag, rotation: 0 })));
     const text = testi.join("\n");
+    const lista = parseMovimenti(text, today());
+    if (lista) return aggiungiMovimenti(lista, pagine[0], formato, scelta, nota);
     const p = parseReceipt(text, today());
     const voce = {
       tipologia: guessTipologia(p.esercente, text, rows),
@@ -2673,23 +2740,103 @@ body:has(.sel-bar:not([hidden])) { padding-bottom: calc(var(--sel-h, 0px) + 24px
     const foto = fotoB64 ? await salvaFoto(fotoB64) : null;
     const full = { ...voce, creato: Date.now(), daScontrino: true, ...foto ? { foto } : {}, ...valutaBase !== "EUR" ? { valutaBase } : {} };
     const ref = await col.add(full);
-    lsSet("spese.ultimoConto", conto);
-    freshId = ref.id;
-    vaiAlPeriodoDi(parseDate(full.data));
-    render();
+    mostraAggiunta(conto, ref.id, full.data);
     const saved = { id: ref.id, ...full };
-    const dove = multiConti() ? ` · in «${nomeConto(conto)}»${visibili.has(conto) ? "" : " (conto che non stai guardando)"}` : "";
-    const nf = !vuoleFoto ? "" : foto ? " · foto salvata" : " · foto non salvata";
-    scanStatus(`Aggiunta: ${full.esercente} · ${testoImporto(full)} · ${dayFmt.format(parseDate(full.data))}${p.data ? "" : " (data di oggi)"}${dove}${nf}${nota ? ". " + nota : ""}`, {
+    scanStatus(`Aggiunta: ${full.esercente} · ${testoImporto(full)} · ${dayFmt.format(parseDate(full.data))}${p.data ? "" : " (data di oggi)"}${testoConto(conto)}${testoFoto(vuoleFoto, foto ? 1 : 0, 1)}${nota ? ". " + nota : ""}`, {
       actions: [
         ["Modifica", () => { scanStatus(""); startEdit(saved); }],
-        ["Annulla", async () => {
-          try { await col.doc(ref.id).delete(); freshId = null; render(); scanStatus("Spesa annullata."); }
-          catch (e) { scanStatus("Annullamento non riuscito. Elimina la voce dall'elenco.", { err: true }); }
-        }],
+        azioneAnnulla([ref.id]),
       ],
     });
     return "aggiunta";
+  }
+
+  // ---- Esito delle spese aggiunte da una foto (scontrino o lista di movimenti) ----
+  // Conto ricordato per la prossima volta, spesa evidenziata e vista sul periodo della sua data
+  function mostraAggiunta(conto, id, data) {
+    lsSet("spese.ultimoConto", conto);
+    freshId = id;
+    vaiAlPeriodoDi(parseDate(data));
+    render();
+  }
+  // " · in «Lavoro»" con più conti (e se non lo si sta guardando lo dice), altrimenti ""
+  const testoConto = (conto) => multiConti() ? ` · in «${nomeConto(conto)}»${visibili.has(conto) ? "" : " (conto che non stai guardando)"}` : "";
+  // Com'è andata la foto su n spese di cui salvate con la foto ("" se non la si voleva)
+  function testoFoto(vuoleFoto, salvate, n) {
+    if (!vuoleFoto) return "";
+    if (salvate === n) return n === 1 ? " · foto salvata" : " · foto salvate";
+    if (!salvate) return n === 1 ? " · foto non salvata" : " · foto non salvate";
+    return ` · foto salvata su ${salvate} di ${n}`;
+  }
+  // Pulsante «Annulla» dell'esito: elimina le spese appena aggiunte (e le loro foto)
+  const azioneAnnulla = (ids) => ["Annulla", async () => {
+    const una = ids.length === 1;
+    try { for (const id of ids) await col.doc(id).delete(); freshId = null; render(); scanStatus(una ? "Spesa annullata." : "Spese annullate."); }
+    catch (e) { render(); scanStatus(`Annullamento non riuscito. Elimina ${una ? "la voce" : "le voci"} dall'elenco.`, { err: true }); }
+  }];
+
+  // Lista di movimenti: ogni uscita nuova diventa una spesa come quella di uno scontrino letto per intero, con le scelte
+  // della finestra (conto, offerta) e, se si vuole la foto, una copia della foto per ciascuna (eliminarne una non tocca
+  // le altre). Le uscite già presenti nel conto si saltano. Risponde quante spese ha aggiunto
+  async function aggiungiMovimenti({ uscite, entrate, senzaNome }, pagina, formato, scelta, nota) {
+    const { conto, foto: vuoleFoto } = scelta;
+    const nuove = usciteNuove(uscite.map(u => ({ ...u, prezzoCent: arrotonda(u.prezzoCent, valutaBase) })), conto);
+    const conteggi = { saltate: uscite.length - nuove.length, entrate, senzaNome };
+    if (!nuove.length) { scanStatus(`Nessuna spesa aggiunta: nella lista non ci sono uscite nuove${altriMovimenti(conteggi)}.${nota ? " " + nota : ""}`); return 0; }
+    let fotoB64 = null;
+    if (vuoleFoto) { try { fotoB64 = await comprimiFoto(pagina, formato); } catch (e) {} }
+    const { aggiunte, errore } = await salvaMovimenti(nuove, fotoB64, scelta);
+    if (!aggiunte.length) throw errore; // nemmeno la prima: come uno scontrino che non si salva
+    const recente = aggiunte.reduce((a, b) => b.data > a.data ? b : a);
+    mostraAggiunta(conto, recente.id, recente.data);
+    scanStatus(esitoMovimenti({ aggiunte, nonSalvate: nuove.length - aggiunte.length, conteggi, scelta, nota }), {
+      err: !!errore,
+      actions: [azioneAnnulla(aggiunte.map(s => s.id))],
+    });
+    return aggiunte.length;
+  }
+  // "Aggiunte 7 spese (1 già presente saltata) · in «Lavoro» · foto salvate", più la nota e le voci non salvate
+  function esitoMovimenti({ aggiunte, nonSalvate, conteggi, scelta: { conto, foto: vuoleFoto }, nota }) {
+    const n = aggiunte.length;
+    const non = nonSalvate ? `. Salvataggio non riuscito per ${nonSalvate === 1 ? "l'altra" : `le altre ${nonSalvate}`}: aggiungile a mano.` : "";
+    return `${n === 1 ? "Aggiunta 1 spesa" : `Aggiunte ${n} spese`}${altriMovimenti(conteggi)}${testoConto(conto)}`
+      + `${testoFoto(vuoleFoto, aggiunte.filter(s => s.foto).length, n)}${nota ? ". " + nota : ""}${non}`;
+  }
+  // Salva le uscite una alla volta, ognuna con la sua copia della foto; al primo salvataggio che non riesce si ferma
+  // e cancella la foto di quella voce. Risponde { aggiunte: le spese salvate (con l'id), errore: quello che l'ha fermata }
+  async function salvaMovimenti(nuove, fotoB64, { conto, offerto }) {
+    const aggiunte = [];
+    for (const u of nuove) {
+      const foto = fotoB64 ? await salvaFoto(fotoB64) : null;
+      const full = { tipologia: guessTipologia(u.esercente, "", rows), esercente: u.esercente, prezzoCent: u.prezzoCent, data: u.data, conto, offerto, creato: Date.now(), daScontrino: true, ...foto ? { foto } : {}, ...valutaBase !== "EUR" ? { valutaBase } : {} };
+      try { aggiunte.push({ id: (await col.add(full)).id, ...full }); }
+      catch (errore) { cancellaFoto(foto); return { aggiunte, errore }; }
+    }
+    return { aggiunte, errore: null };
+  }
+  // " (2 già presenti saltate, 1 entrata ignorata, 1 senza esercente saltata)", oppure "" se non ce ne sono
+  function altriMovimenti({ saltate, entrate, senzaNome }) {
+    const altri = [
+      saltate && (saltate === 1 ? "1 già presente saltata" : `${saltate} già presenti saltate`),
+      entrate && (entrate === 1 ? "1 entrata ignorata" : `${entrate} entrate ignorate`),
+      senzaNome && (senzaNome === 1 ? "1 senza esercente saltata" : `${senzaNome} senza esercente saltate`),
+    ].filter(Boolean);
+    return altri.length ? ` (${altri.join(", ")})` : "";
+  }
+  // Le uscite che non sono già tra le spese del conto (stessa data, stesso importo, esercente simile): ogni spesa
+  // presente ne assorbe al massimo una, così due pagamenti uguali nello stesso giorno restano entrambi
+  function usciteNuove(uscite, conto) {
+    const presenti = rows.filter(r => contoOf(r) === conto);
+    return uscite.filter(u => {
+      const i = presenti.findIndex(r => r.data === u.data && r.prezzoCent === u.prezzoCent && esercentiSimili(r.esercente, u.esercente));
+      if (i >= 0) presenti.splice(i, 1);
+      return i < 0;
+    });
+  }
+  // Minuscolo, senza accenti, solo lettere e numeri: simili se uno contiene l'altro (mai se uno dei due è vuoto)
+  function esercentiSimili(a, b) {
+    a = norm(a).replace(/[^a-z0-9]/g, ""); b = norm(b).replace(/[^a-z0-9]/g, "");
+    return !!a && !!b && (a.includes(b) || b.includes(a));
   }
 
   function erroreLettura(e) {
@@ -2754,14 +2901,14 @@ body:has(.sel-bar:not([hidden])) { padding-bottom: calc(var(--sel-h, 0px) + 24px
     const conta = { aggiunte: 0, saltati: 0, illeggibili: 0, troncati: 0 };
     for (const f of gruppo) {
       const r = await importaFile(f, scelta);
-      conta[r.esito]++;
+      conta[r.esito] += r.spese || 1; // una lista di movimenti conta quante spese ha aggiunto
       if (r.troncato) conta.troncati++;
     }
     if (gruppo.length > 1) scanStatus(riassuntoCondivisi(gruppo.length, conta) + avvisoScartati(scartati));
   }
   // Un file: parte a finestre chiuse (dall'esito del file prima si può aprire Modifica), il plugin lo rende
   // in pagine JPEG, poi lo stesso percorso della galleria; letto a metà, si aspetta il modulo. La copia si libera sempre.
-  // Risponde { esito: "aggiunte" | "saltati" | "illeggibili", troncato }
+  // Risponde { esito: "aggiunte" | "saltati" | "illeggibili", troncato } (una lista di movimenti anche spese: quante ne ha aggiunte)
   async function importaFile(f, scelta) {
     for (let d; (d = finestraAperta());) await chiusa(d);
     try {
@@ -2769,6 +2916,7 @@ body:has(.sel-bar:not([hidden])) { padding-bottom: calc(var(--sel-h, 0px) + 24px
       const r = await COND.leggi({ id: f.id });
       const troncato = r.totale > MAX_PAGINE;
       const letto = await leggiScontrino(r.pagine, "jpeg", scelta, troncato ? `Ho letto le prime ${MAX_PAGINE} pagine.` : "");
+      if (typeof letto === "number") return { esito: letto ? "aggiunte" : "saltati", spese: letto, troncato };
       const aggiunta = letto === "aggiunta" || await attendiModulo();
       return { esito: aggiunta ? "aggiunte" : "saltati", troncato };
     } catch (e) {
