@@ -1150,7 +1150,10 @@ body:has(.sel-bar:not([hidden])) { padding-bottom: calc(var(--sel-h, 0px) + 24px
   const selezione = new Set();
   let selBusy = false, selEsito = null, selTimer = null;
   let idsMostrati = [];   // spese nell'elenco in questo momento (per "Seleziona tutte")
-  let freshId = null;     // ultima spesa inserita da scontrino
+  // Spese evidenziate come nuove: quelle aggiunte con l'ultima scelta della finestra prima della foto (uno scontrino,
+  // una lista di movimenti o tutti i file condivisi insieme); restano finché non se ne aggiungono con un'altra scelta
+  const freshIds = new Set();
+  let sceltaFresh = null;
   let tipiSugg = [];      // suggerimenti per la tipologia
   let fotoInAttesa = null; // foto (base64) di uno scontrino da salvare quando si preme Aggiungi
 
@@ -1581,7 +1584,7 @@ body:has(.sel-bar:not([hidden])) { padding-bottom: calc(var(--sel-h, 0px) + 24px
         btn(confirming ? "confirm" : null, confirming ? "Conferma" : "Elimina", () => onDelete(r)));
     }
     let classi = "row";
-    if (r.id === editingId) classi += " editing"; else if (r.id === freshId) classi += " fresh";
+    if (r.id === editingId) classi += " editing"; else if (freshIds.has(r.id)) classi += " fresh";
     if (inSel) classi += scelta ? " in-sel scelta" : " in-sel";
     const li = el("li", classi, who, el("div", "amt", testoImporto(r), sottoImporto(r)), lato);
     idDiRiga.set(li, r.id);
@@ -2740,7 +2743,7 @@ body:has(.sel-bar:not([hidden])) { padding-bottom: calc(var(--sel-h, 0px) + 24px
     const foto = fotoB64 ? await salvaFoto(fotoB64) : null;
     const full = { ...voce, creato: Date.now(), daScontrino: true, ...foto ? { foto } : {}, ...valutaBase !== "EUR" ? { valutaBase } : {} };
     const ref = await col.add(full);
-    mostraAggiunta(conto, ref.id, full.data);
+    mostraAggiunta(scelta, [ref.id], full.data);
     const saved = { id: ref.id, ...full };
     scanStatus(`Aggiunta: ${full.esercente} · ${testoImporto(full)} · ${dayFmt.format(parseDate(full.data))}${p.data ? "" : " (data di oggi)"}${testoConto(conto)}${testoFoto(vuoleFoto, foto ? 1 : 0, 1)}${nota ? ". " + nota : ""}`, {
       actions: [
@@ -2752,10 +2755,11 @@ body:has(.sel-bar:not([hidden])) { padding-bottom: calc(var(--sel-h, 0px) + 24px
   }
 
   // ---- Esito delle spese aggiunte da una foto (scontrino o lista di movimenti) ----
-  // Conto ricordato per la prossima volta, spesa evidenziata e vista sul periodo della sua data
-  function mostraAggiunta(conto, id, data) {
-    lsSet("spese.ultimoConto", conto);
-    freshId = id;
+  // Conto ricordato per la prossima volta, spese evidenziate (insieme alle altre della stessa scelta) e vista sul periodo della data
+  function mostraAggiunta(scelta, ids, data) {
+    lsSet("spese.ultimoConto", scelta.conto);
+    if (scelta !== sceltaFresh) { freshIds.clear(); sceltaFresh = scelta; }
+    ids.forEach(id => freshIds.add(id));
     vaiAlPeriodoDi(parseDate(data));
     render();
   }
@@ -2771,7 +2775,7 @@ body:has(.sel-bar:not([hidden])) { padding-bottom: calc(var(--sel-h, 0px) + 24px
   // Pulsante «Annulla» dell'esito: elimina le spese appena aggiunte (e le loro foto)
   const azioneAnnulla = (ids) => ["Annulla", async () => {
     const una = ids.length === 1;
-    try { for (const id of ids) await col.doc(id).delete(); freshId = null; render(); scanStatus(una ? "Spesa annullata." : "Spese annullate."); }
+    try { for (const id of ids) await col.doc(id).delete(); ids.forEach(id => freshIds.delete(id)); render(); scanStatus(una ? "Spesa annullata." : "Spese annullate."); }
     catch (e) { render(); scanStatus(`Annullamento non riuscito. Elimina ${una ? "la voce" : "le voci"} dall'elenco.`, { err: true }); }
   }];
 
@@ -2788,7 +2792,7 @@ body:has(.sel-bar:not([hidden])) { padding-bottom: calc(var(--sel-h, 0px) + 24px
     const { aggiunte, errore } = await salvaMovimenti(nuove, fotoB64, scelta);
     if (!aggiunte.length) throw errore; // nemmeno la prima: come uno scontrino che non si salva
     const recente = aggiunte.reduce((a, b) => b.data > a.data ? b : a);
-    mostraAggiunta(conto, recente.id, recente.data);
+    mostraAggiunta(scelta, aggiunte.map(s => s.id), recente.data);
     scanStatus(esitoMovimenti({ aggiunte, nonSalvate: nuove.length - aggiunte.length, conteggi, scelta, nota }), {
       err: !!errore,
       actions: [azioneAnnulla(aggiunte.map(s => s.id))],
